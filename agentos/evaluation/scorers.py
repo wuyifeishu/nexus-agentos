@@ -63,8 +63,8 @@ def _ngrams(tokens: list[str], n: int) -> Counter:
     return Counter(tuple(tokens[i:i + n]) for i in range(len(tokens) - n + 1))
 
 
-def bleu(reference: str, candidate: str, max_n: int = 4) -> float:
-    """BLEU score (token-level, un-smoothed)。"""
+def bleu(reference: str, candidate: str, max_n: int = 4, smoothing: bool = True) -> float:
+    """BLEU score (token-level, with smoothing for short texts)."""
     ref_tokens = _tokenize(reference)
     cand_tokens = _tokenize(candidate)
 
@@ -77,14 +77,22 @@ def bleu(reference: str, candidate: str, max_n: int = 4) -> float:
         cand_ngrams = _ngrams(cand_tokens, n)
 
         if not cand_ngrams:
-            precisions.append(0.0)
+            if smoothing:
+                precisions.append(1.0 / (2 ** n))  # Laplace-like decay
+            else:
+                precisions.append(0.0)
             continue
 
         clipped = sum(min(cand_ngrams[ng], ref_ngrams.get(ng, 0)) for ng in cand_ngrams)
-        precisions.append(clipped / sum(cand_ngrams.values()))
+        prec = clipped / sum(cand_ngrams.values())
+        precisions.append(prec)
 
     if any(p == 0 for p in precisions):
-        return 0.0
+        if smoothing:
+            # Method 1 smoothing: replace zeros with small epsilon
+            precisions = [p if p > 0 else 1.0 / (2 ** i) for i, p in enumerate(precisions)]
+        else:
+            return 0.0
 
     # Brevity penalty
     bp = min(1.0, math.exp(1 - len(ref_tokens) / max(len(cand_tokens), 1)))
@@ -115,6 +123,7 @@ def semantic_similarity(candidate: str, reference: str, embedder: Any = None) ->
     """
     基于embedding的语义相似度（cosine similarity）。
     需要传入embedder实例或使用默认LocalEmbedder。
+    Falls back to character Jaccard similarity if embedder unavailable.
     """
     if not candidate or not reference:
         return 0.0
@@ -129,7 +138,14 @@ def semantic_similarity(candidate: str, reference: str, embedder: Any = None) ->
         from agentos.cache.embedder import cosine_similarity as cos_sim
         return float(cos_sim(emb_cand, emb_ref))
     except Exception:
-        return 0.0
+        # Fallback: character-level Jaccard similarity
+        set_a = set(candidate.lower())
+        set_b = set(reference.lower())
+        if not set_a or not set_b:
+            return 0.0
+        intersection = set_a & set_b
+        union = set_a | set_b
+        return len(intersection) / len(union) if union else 0.0
 
 
 # ── Exact / Contains ────────────────────────────
@@ -250,17 +266,133 @@ STRATEGY_CODE_GEN = ScoringStrategy(
 STRATEGY_QA = ScoringStrategy(
     name="question_answering",
     weights={"rouge_l": 0.3, "contains": 0.5, "exact": 0.2},
-    pass_threshold=0.6,
+    pass_threshold=0.5,
 )
 
 STRATEGY_SUMMARY = ScoringStrategy(
     name="summarization",
-    weights={"rouge_l": 0.5, "bleu": 0.1, "semantic": 0.4},
-    pass_threshold=0.5,
+    weights={"rouge_l": 0.6, "bleu": 0.1, "semantic": 0.3},
+    pass_threshold=0.25,
 )
 
 STRATEGY_TRANSLATION = ScoringStrategy(
     name="translation",
     weights={"bleu": 0.6, "rouge_l": 0.2, "semantic": 0.2},
-    pass_threshold=0.4,
+    pass_threshold=0.30,
 )
+
+
+# ── LLM‑as‑Judge ────────────────────────────────
+
+_JUDGE_PROMPT = """You are an evaluation judge. Grade the following answer against the reference.
+Output ONLY a number between 0.0 and 1.0 and a one-sentence reason.
+
+Task: {task}
+Reference (expected): {reference}
+Candidate (actual): {candidate}
+
+Score (0.0-1.0):
+Reason:"""
+
+
+def llm_judge(reference: str, candidate: str, task: str = "general",
+              model: str = "gpt-4o-mini", api_key: str = "") -> float:
+    """
+    LLM‑as‑Judge: 用 LLM 评估候选答案与参考答案的一致性。
+    需要 OPENAI_API_KEY (或兼容 endpoint)。
+    Returns 0.0 on any error / no key.
+    """
+    if not api_key:
+        import os
+        api_key = os.environ.get("OPENAI_API_KEY", "")
+
+    if not api_key:
+        return 0.0
+
+    prompt = _JUDGE_PROMPT.format(task=task, reference=reference, candidate=candidate)
+
+    try:
+        import requests
+        resp = requests.post(
+            "https://api.openai.com/v1/chat/completions",
+            headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
+            json={
+                "model": model,
+                "messages": [{"role": "user", "content": prompt}],
+                "temperature": 0.0,
+                "max_tokens": 50,
+            },
+            timeout=15,
+        )
+        if resp.status_code != 200:
+            return 0.0
+
+        data = resp.json()
+        text = data["choices"][0]["message"]["content"].strip()
+
+        # Extract first float from response
+        import re as _re
+        m = _re.search(r"(\d+\.?\d*)", text)
+        if m:
+            return max(0.0, min(1.0, float(m.group(1))))
+
+        return 0.0
+    except Exception:
+        return 0.0
+
+
+# ── Strategy w/ LLM‑Judge ───────────────────────
+
+STRATEGY_QA_JUDGE = ScoringStrategy(
+    name="qa_with_judge",
+    weights={"rouge_l": 0.2, "contains": 0.3, "exact": 0.1, "judge": 0.4},
+    pass_threshold=0.55,
+)
+
+STRATEGY_SUMMARY_JUDGE = ScoringStrategy(
+    name="summary_with_judge",
+    weights={"rouge_l": 0.3, "bleu": 0.1, "judge": 0.6},
+    pass_threshold=0.55,
+)
+
+STRATEGY_CODE_JUDGE = ScoringStrategy(
+    name="code_with_judge",
+    weights={"rouge_l": 0.05, "bleu": 0.05, "exact": 0.2, "contains": 0.3, "judge": 0.4},
+    pass_threshold=0.55,
+)
+
+
+class CompositeScorerV2(CompositeScorer):
+    """v2 scorer with optional LLM‑as‑Judge."""
+
+    def __init__(self, strategy: ScoringStrategy | None = None,
+                 llm_model: str = "gpt-4o-mini"):
+        super().__init__(strategy)
+        self._llm_model = llm_model
+
+    def score(self, reference: str, candidate: str, embedder: Any = None,
+              task: str = "general") -> ScoreResult:
+        scores: dict[str, float] = {}
+
+        if "rouge_l" in self.strategy.weights:
+            scores["rouge_l"] = rouge_l(reference, candidate)
+        if "bleu" in self.strategy.weights:
+            scores["bleu"] = bleu(reference, candidate)
+        if "exact" in self.strategy.weights:
+            scores["exact"] = exact_match(reference, candidate)
+        if "contains" in self.strategy.weights:
+            scores["contains"] = contains_match(reference, candidate)
+        if "semantic" in self.strategy.weights:
+            scores["semantic"] = semantic_similarity(candidate, reference, embedder)
+        if "judge" in self.strategy.weights:
+            scores["judge"] = llm_judge(reference, candidate, task=task, model=self._llm_model)
+
+        weighted = sum(scores.get(k, 0) * w for k, w in self.strategy.weights.items())
+        passed = weighted >= self.strategy.pass_threshold
+        details = ", ".join(f"{k}={v:.3f}" for k, v in scores.items())
+
+        return ScoreResult(
+            reference=reference, candidate=candidate,
+            scores=scores, weighted_score=weighted,
+            passed=passed, details=details,
+        )
