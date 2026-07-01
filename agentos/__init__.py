@@ -1,5 +1,6 @@
 """NexusAgent - Production-grade Agent Framework SDK
 
+v1.11.0: Background Task Manager + Agent Supervision Tree + Full Checkpoint Integration + Auto-Context Paging.
 v1.10.0: All-in — Deploy (Docker/K8s) + Eval (SWE-bench/GAIA) + Multimodal (Vision/Audio) + Prompt Hub (versioned) + Cost Tracker (pricing).
 v1.9.9: GuardPipeline (PII/Injection/Toxicity safety with strict/permissive modes).
 v1.9.5: CodeSandbox (safe code gen + test case validation) + Human-in-the-Loop breakpoints.
@@ -38,7 +39,7 @@ v1.4.0: +End-to-end examples (multi_agent_research.py, file_ops_agent.py),
 +CLI demo upgraded with self-check mode, +Agent marketplace listing.
 """
 
-__version__ = "1.10.0"
+__version__ = "1.12.0"
 
 # Core - DI system
 from agentos.core.di import (
@@ -1323,6 +1324,15 @@ __all__ = [
     # v1.10.0: Prompt Hub
     "PromptType", "PromptTag", "PromptVersion", "PromptHub",
     "BUILTIN_PROMPTS", "create_default_hub",
+    # v1.11.0: Background Task Manager
+    "BackgroundTaskManager", "BackgroundTask", "BackgroundTaskStatus", "BackgroundTaskConfig",
+    "TaskProgress", "ProgressPhase",
+    # v1.11.0: Agent Supervision Tree
+    "AgentSupervisor", "SupervisedAgent", "SupervisorConfig",
+    "AgentQuota", "SupervisionEvent", "SupervisionEventType",
+    # v1.12.0: Virtual Memory Pager
+    "MemoryPager", "SwapStore", "MemoryPage", "PagerStats",
+    "create_paging_callback", "recall_relevant_memories",
 ]
 
 # Enterprise (v1.5.5)
@@ -1369,6 +1379,24 @@ from agentos.eval.benchmark import (
 from agentos.prompt.hub import (
     PromptType, PromptTag, PromptVersion, PromptHub,
     BUILTIN_PROMPTS, create_default_hub,
+)
+
+# ── v1.12.0: Virtual Memory Pager ──
+from agentos.memory.pager import (
+    MemoryPager, SwapStore, MemoryPage, PagerStats,
+    create_paging_callback, recall_relevant_memories,
+)
+
+# ── v1.11.0: Background Task Manager ──
+from agentos.background.task_manager import (
+    BackgroundTaskManager, BackgroundTask, BackgroundTaskStatus, BackgroundTaskConfig,
+    TaskProgress, ProgressPhase,
+)
+
+# ── v1.11.0: Agent Supervision Tree ──
+from agentos.background.supervisor import (
+    AgentSupervisor, SupervisedAgent, SupervisorConfig,
+    AgentQuota, SupervisionEvent, SupervisionEventType,
 )
 
 # Schema Enforcer (v1.3.9)

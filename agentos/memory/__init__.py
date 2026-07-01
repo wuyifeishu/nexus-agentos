@@ -78,4 +78,10 @@ __all__ = [
     "WorkingMemoryItem",
     "VectorMemory",
     "ContextCompressor",
+    "MemoryPager",
+    "SwapStore",
+    "MemoryPage",
+    "PagerStats",
+    "create_paging_callback",
+    "recall_relevant_memories",
 ]
