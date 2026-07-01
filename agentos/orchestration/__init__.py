@@ -1,4 +1,4 @@
-"""Orchestration module — Graph orchestrator, A2A routing, graph executor, parallel scheduler, swarm coordinator"""
+"""Orchestration module — Graph orchestrator, A2A routing, graph executor, parallel scheduler, swarm coordinator, distributed orchestration"""
 
 from agentos.orchestration.graph import (
     GraphOrchestrator,
@@ -36,6 +36,20 @@ from agentos.orchestration.swarm_coordinator import (
     MessageBus,
     SwarmMessage,
 )
+from agentos.orchestration.distributed import (
+    DistSwarmCoordinator,
+    DistSwarmConfig,
+    DistTaskQueue,
+    DistTaskRecord,
+    DistTaskStatus,
+    CrossNodeBus,
+    CrossNodeMailbox,
+    RayAgentActor,
+    AgentPlacementSpec,
+    AgentStatus as DistAgentStatus,
+    PlacementStrategy,
+    quick_start,
+)
 
 __all__ = [
     "GraphOrchestrator",
@@ -65,4 +79,17 @@ __all__ = [
     "ConflictType",
     "MessageBus",
     "SwarmMessage",
+    # Distributed Orchestration (v1.14.2)
+    "DistSwarmCoordinator",
+    "DistSwarmConfig",
+    "DistTaskQueue",
+    "DistTaskRecord",
+    "DistTaskStatus",
+    "CrossNodeBus",
+    "CrossNodeMailbox",
+    "RayAgentActor",
+    "AgentPlacementSpec",
+    "DistAgentStatus",
+    "PlacementStrategy",
+    "quick_start",
 ]

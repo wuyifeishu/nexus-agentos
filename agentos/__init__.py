@@ -41,7 +41,7 @@ v1.4.0: +End-to-end examples (multi_agent_research.py, file_ops_agent.py),
 +CLI demo upgraded with self-check mode, +Agent marketplace listing.
 """
 
-__version__ = "1.14.1"
+__version__ = "1.14.2"
 
 # Core - DI system
 from agentos.core.di import (
