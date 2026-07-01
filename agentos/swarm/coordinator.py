@@ -1,5 +1,5 @@
 """
-v1.9.7: Smart Swarm Coordinator with layered agent memory.
+v1.9.8: Smart Swarm Coordinator with tool registry + intelligent routing.
 
 Full intelligence stack:
 - TaskDecomposer: decompose complex tasks into sub-task DAGs
@@ -10,6 +10,9 @@ Full intelligence stack:
 - AgentMonitor: quality gates + self-monitoring pipeline
 - ExecutionTrace: full span-tree observability + bottleneck detection
 - AgentMemory: three-tier memory (working/short-term/long-term) + context window
+- ToolRegistry: schema-based tool catalog with versioning, capabilities, search
+- ToolRouter: intelligent tool selection with LLM + semantic matching
+- ToolExecutor: safe tool execution with validation, rate limiting, destructive confirmation
 """
 
 from __future__ import annotations
@@ -40,6 +43,11 @@ from agentos.swarm.execution_trace import (
 from agentos.swarm.agent_memory import (
     AgentMemory, WorkingMemory, ShortTermMemory, LongTermMemory,
     ContextWindowManager, ContextBudget, MemoryEntry,
+)
+from agentos.swarm.tool_registry import (
+    ToolRegistry, ToolRouter, ToolExecutor, ToolSchema, ToolParam,
+    ToolCategory, RoutingDecision, RoutingContext, ToolExecutionError,
+    create_tool,
 )
 
 
@@ -226,6 +234,9 @@ class SmartSwarmCoordinator:
         monitor: AgentMonitor | None = None,
         trace_collector: TraceCollector | None = None,
         memory: AgentMemory | None = None,
+        tool_registry: ToolRegistry | None = None,
+        tool_router: ToolRouter | None = None,
+        tool_executor: ToolExecutor | None = None,
     ):
         """
         Initialize smart swarm coordinator.
@@ -242,6 +253,9 @@ class SmartSwarmCoordinator:
             monitor: AgentMonitor for quality gating (created if None)
             trace_collector: TraceCollector for execution traces (created if None)
             memory: AgentMemory for layered memory (created if None)
+            tool_registry: ToolRegistry for tool catalog (created if None)
+            tool_router: ToolRouter for intelligent tool selection (created if None)
+            tool_executor: ToolExecutor for safe tool execution (created if None)
         """
         self.topology = topology
         self.max_rounds = max_rounds
@@ -257,6 +271,9 @@ class SmartSwarmCoordinator:
         self.monitor = monitor or AgentMonitor()
         self.tracer = trace_collector or TraceCollector()
         self.memory = memory or AgentMemory()
+        self.tool_registry = tool_registry or ToolRegistry()
+        self.tool_router = tool_router or ToolRouter(self.tool_registry)
+        self.tool_executor = tool_executor or ToolExecutor(self.tool_registry)
 
         # Original topology methods bound for backward compatibility
         self._topo_handlers = {
@@ -986,6 +1003,43 @@ class SmartSwarmCoordinator:
             gate.data["_latency_ms"] = elapsed
 
         return output, report
+
+    # ── Tool Registry Convenience Methods ─────────────────────────
+
+    def register_tool(
+        self,
+        name: str,
+        description: str,
+        handler: Callable,
+        category: ToolCategory = ToolCategory.CUSTOM,
+        params: list[ToolParam] | None = None,
+        capabilities: list[str] | None = None,
+        tags: list[str] | None = None,
+        is_destructive: bool = False,
+        rate_limit: int = 0,
+        **kwargs,
+    ) -> ToolSchema:
+        """Register a tool in the coordinator's tool registry."""
+        tool = create_tool(
+            name=name, description=description, handler=handler,
+            category=category, params=params or [],
+            capabilities=capabilities or [], tags=tags or [],
+            is_destructive=is_destructive, rate_limit=rate_limit, **kwargs,
+        )
+        return self.tool_registry.register(tool)
+
+    def find_tool(self, query: str, top_k: int = 5) -> list[tuple[ToolSchema, float]]:
+        """Search for tools matching a natural language query."""
+        return self.tool_registry.search(query, top_k=top_k)
+
+    def route_tool(self, task: str, **ctx_kwargs) -> RoutingDecision:
+        """Route a task to the best matching tool."""
+        context = RoutingContext(task=task, **ctx_kwargs)
+        return self.tool_router.route(context)
+
+    def execute_tool(self, tool_name: str, params: dict[str, Any] | None = None, force: bool = False) -> Any:
+        """Execute a registered tool safely."""
+        return self.tool_executor.execute(tool_name, params, force=force)
 
 
 # ── Backward-compatible alias ─────────────────────────────────────

@@ -1,4 +1,4 @@
-"""Swarm module - Swarm coordinator, collaboration patterns, v1.9.7 layered memory"""
+"""Swarm module - Swarm coordinator, collaboration patterns, v1.9.8 tool registry + routing"""
 
 from agentos.swarm.coordinator import (
     SmartSwarmCoordinator,
@@ -71,6 +71,18 @@ from agentos.swarm.agent_memory import (
     ContextBudget,
     MemoryEntry,
 )
+from agentos.swarm.tool_registry import (
+    ToolRegistry,
+    ToolRouter,
+    ToolExecutor,
+    ToolSchema,
+    ToolParam,
+    ToolCategory,
+    RoutingDecision,
+    RoutingContext,
+    ToolExecutionError,
+    create_tool,
+)
 
 __all__ = [
     # Coordinator
@@ -134,4 +146,15 @@ __all__ = [
     "ContextWindowManager",
     "ContextBudget",
     "MemoryEntry",
+    # Tool Registry & Router (v1.9.8)
+    "ToolRegistry",
+    "ToolRouter",
+    "ToolExecutor",
+    "ToolSchema",
+    "ToolParam",
+    "ToolCategory",
+    "RoutingDecision",
+    "RoutingContext",
+    "ToolExecutionError",
+    "create_tool",
 ]
