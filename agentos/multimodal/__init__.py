@@ -1,23 +1,27 @@
-"""AgentOS Multimodal Processing — v1.2.7.
-
-- MultimodalManager: 统一多模态入口，自动路由到图像/音频/文档处理器。
-- ImageProcessor / AudioProcessor / DocumentParser: 专用处理器。
-"""
-
+"""v1.0.0-v1.10.0: Multimodal — Vision & Audio providers + manager."""
+# Original exports (v1.2.7)
 from agentos.multimodal.manager import (
-    Modality,
-    MultimodalBlock,
-    ImageProcessor,
-    AudioProcessor,
-    DocumentParser,
     MultimodalManager,
+    Modality,
+)
+
+# v1.10.0: Vision & Audio providers
+from agentos.multimodal.provider import (
+    ImageFormat, AudioFormat,
+    MultiModalContent, MultiModalMessage,
+    VisionProvider, OpenAIVisionProvider, LocalVisionProvider,
+    AudioProvider, OpenAIAudioProvider, EdgeTTSProvider,
+    MultiModalClient,
 )
 
 __all__ = [
-    "Modality",
-    "MultimodalBlock",
-    "ImageProcessor",
-    "AudioProcessor",
-    "DocumentParser",
+    # Original
     "MultimodalManager",
+    "Modality",
+    # v1.10.0
+    "ImageFormat", "AudioFormat",
+    "MultiModalContent", "MultiModalMessage",
+    "VisionProvider", "OpenAIVisionProvider", "LocalVisionProvider",
+    "AudioProvider", "OpenAIAudioProvider", "EdgeTTSProvider",
+    "MultiModalClient",
 ]
