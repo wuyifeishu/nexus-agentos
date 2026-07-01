@@ -4,6 +4,22 @@ All notable changes to NexusAgentOS.
 
 ---
 
+## [1.8.3] — 2026-07-01
+
+### Added
+- **P0-① Claude Sonnet 5**: Full support for Anthropic's latest Sonnet 5 model (`claude-sonnet-5-20250630`). Default Anthropic model upgraded from Sonnet 4 to Sonnet 5. Pricing $3/$15 per 1M tokens (same as Sonnet 4, significantly cheaper than Opus). Also added Claude Opus 4 and Opus 4.5 to pricing registry. Sonnet 5 prefix auto-detection for future 5-series models.
+- **P0-④ Ollama Provider**: Native Ollama local inference provider (`agentos/llm/ollama_provider.py`). OpenAI-compatible API, supports all Ollama models (qwen2.5, llama3.1, gemma2, mistral, deepseek-r1). Default: `qwen2.5:7b`. Zero extra dependencies.
+- **P0-④ Huawei Pangu Provider**: Native Pangu provider (`agentos/llm/pangu_provider.py`). Supports pangu-4, pangu-3.1, pangu-code, pangu-vision. Default endpoint: `https://pangu-api.huaweicloud.com/v1`.
+- **P0-② Persistent Checkpointer** (`agentos/checkpoint/`): Production-grade checkpoint/resume engine. Two backends: SQLite (zero-dependency, dev/POC) and Postgres (asyncpg, production). Features: auto-snapshot per tool_call/llm_call, time-travel to any historical state, thread branching via parent pointer, garbage collection (delete_before). Designed after LangGraph PostgresSaver.
+
+### Changed
+- LLM Provider count: 3 → 5 (OpenAI, DeepSeek, Anthropic, Ollama, Pangu)
+- Default Anthropic model: `claude-sonnet-4-20250514` → `claude-sonnet-5-20250630`
+- Version: 1.8.2 → 1.8.3
+
+### Fixed
+- P0-③ F821 runtime bugs verified resolved (KeyCreateRequest, KeyScope, TenantTier imports working correctly in CLI)
+
 ## [1.8.2] — 2026-07-01
 
 ### Added

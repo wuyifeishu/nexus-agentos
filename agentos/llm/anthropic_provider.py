@@ -28,14 +28,23 @@ __all__ = ["AnthropicProvider"]
 ANTHROPIC_API_BASE = "https://api.anthropic.com"
 ANTHROPIC_VERSION = "2023-06-01"
 
-# USD per 1M tokens (Anthropic pricing as of 2025-06)
+# USD per 1M tokens (Anthropic pricing as of 2026-07)
 _PRICING: dict[str, tuple[float, float]] = {
+    "claude-sonnet-5-20250630": (3.0, 15.0),       # Sonnet 5 — 性价比最高的 Agent 模型
+    "claude-sonnet-5-20250701": (3.0, 15.0),       # Sonnet 5 (alternate ID)
     "claude-sonnet-4-20250514": (3.0, 15.0),
     "claude-3-5-sonnet-20241022": (3.0, 15.0),
     "claude-3-5-haiku-20241022": (0.80, 4.0),
     "claude-3-opus-20240229": (15.0, 75.0),
     "claude-3-haiku-20240307": (0.25, 1.25),
+    "claude-opus-4-20250514": (15.0, 75.0),        # Opus 4
+    "claude-opus-4-5-20251101": (15.0, 75.0),      # Opus 4.5
 }
+
+# 5-series models identified by prefix
+_SONNET5_PREFIXES = ("claude-sonnet-5", "claude-sonnet5", "sonnet-5")
+def _is_sonnet5(model: str) -> bool:
+    return any(model.startswith(p) for p in _SONNET5_PREFIXES) or "sonnet-5" in model
 
 
 def _messages_to_anthropic(messages: list[Message]) -> tuple[str | None, list[dict[str, Any]]]:

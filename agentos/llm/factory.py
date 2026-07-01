@@ -22,6 +22,8 @@ _PROVIDER_REGISTRY: dict[str, tuple[str, str]] = {
     "openai": ("agentos.llm.openai_provider", "OpenAIProvider"),
     "deepseek": ("agentos.llm.deepseek_provider", "DeepSeekProvider"),
     "anthropic": ("agentos.llm.anthropic_provider", "AnthropicProvider"),
+    "ollama": ("agentos.llm.ollama_provider", "OllamaProvider"),
+    "pangu": ("agentos.llm.pangu_provider", "PanguProvider"),
 }
 
 
@@ -62,6 +64,8 @@ def create_provider(
             "openai": "OPENAI_API_KEY",
             "deepseek": "DEEPSEEK_API_KEY",
             "anthropic": "ANTHROPIC_API_KEY",
+            "ollama": "OLLAMA_API_KEY",
+            "pangu": "PANGU_API_KEY",
         }
         api_key = os.getenv(env_var_map.get(name, ""), "")
 
@@ -70,7 +74,9 @@ def create_provider(
         defaults = {
             "openai": "gpt-4o-mini",
             "deepseek": "deepseek-chat",
-            "anthropic": "claude-sonnet-4-20250514",
+            "anthropic": "claude-sonnet-5-20250630",
+            "ollama": "qwen2.5:7b",
+            "pangu": "pangu-4",
         }
         model = defaults.get(name, "")
 

@@ -22,12 +22,16 @@ from agentos.llm.factory import create_provider
 from agentos.llm.openai_provider import OpenAIProvider
 from agentos.llm.deepseek_provider import DeepSeekProvider
 from agentos.llm.anthropic_provider import AnthropicProvider
+from agentos.llm.ollama_provider import OllamaProvider
+from agentos.llm.pangu_provider import PanguProvider
 
 __all__ = [
     "LLMProvider",
     "OpenAIProvider",
     "DeepSeekProvider",
     "AnthropicProvider",
+    "OllamaProvider",
+    "PanguProvider",
     "CompletionResult",
     "CompletionChoice",
     "CompletionUsage",
