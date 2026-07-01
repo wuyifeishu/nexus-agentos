@@ -8,6 +8,7 @@
 - WorkingMemory: 短期工作记忆。
 - VectorMemory: 向量化短期记忆。
 - ContextCompressor: 对话上下文压缩。
+- MemoryConsolidationPipeline: 长期记忆巩固（Reflection + 向量检索）。
 """
 
 from agentos.memory.pyramid import (
@@ -54,6 +55,27 @@ from agentos.memory.session import (
     SessionState,
     SessionStatus,
 )
+from agentos.memory.consolidation import (
+    MemoryFragment,
+    MemoryImportance,
+    ReflectionResult,
+    ReflectionConfig,
+    ReflectionEngine,
+    MemoryContextInjector,
+    MemoryConsolidationPipeline,
+    VectorStoreBackend,
+    InMemoryVectorStore,
+    EmbeddingProvider,
+    SimpleHashEmbedding,
+)
+from agentos.memory.pager import (
+    MemoryPager,
+    SwapStore,
+    MemoryPage,
+    PagerStats,
+    create_paging_callback,
+    recall_relevant_memories,
+)
 
 __all__ = [
     "MemoryPyramid",
@@ -78,6 +100,23 @@ __all__ = [
     "WorkingMemoryItem",
     "VectorMemory",
     "ContextCompressor",
+    "SessionManager",
+    "Session",
+    "SessionState",
+    "SessionStatus",
+    # Consolidation (v1.14.1)
+    "MemoryFragment",
+    "MemoryImportance",
+    "ReflectionResult",
+    "ReflectionConfig",
+    "ReflectionEngine",
+    "MemoryContextInjector",
+    "MemoryConsolidationPipeline",
+    "VectorStoreBackend",
+    "InMemoryVectorStore",
+    "EmbeddingProvider",
+    "SimpleHashEmbedding",
+    # Pager
     "MemoryPager",
     "SwapStore",
     "MemoryPage",
