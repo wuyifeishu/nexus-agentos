@@ -1,0 +1,191 @@
+# ── AgentOS Kubernetes Manifests ──
+
+# ── ConfigMap ──
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: agentos-config
+  labels:
+    app: agentos
+data:
+  AGENTOS_ENV: "production"
+  AGENTOS_LOG_LEVEL: "INFO"
+  AGENTOS_PORT: "8080"
+
+---
+# ── Deployment ──
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: agentos
+  labels:
+    app: agentos
+    version: v1
+spec:
+  replicas: 2
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  selector:
+    matchLabels:
+      app: agentos
+  template:
+    metadata:
+      labels:
+        app: agentos
+        version: v1
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8080"
+        prometheus.io/path: "/metrics"
+    spec:
+      terminationGracePeriodSeconds: 30
+      containers:
+        - name: agentos
+          image: nexus-agentos:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8080
+              name: http
+              protocol: TCP
+            - containerPort: 9090
+              name: metrics
+              protocol: TCP
+          envFrom:
+            - configMapRef:
+                name: agentos-config
+          env:
+            - name: OPENAI_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: agentos-secrets
+                  key: openai_api_key
+                  optional: true
+            - name: ANTHROPIC_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: agentos-secrets
+                  key: anthropic_api_key
+                  optional: true
+            - name: GOOGLE_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: agentos-secrets
+                  key: google_api_key
+                  optional: true
+            - name: DEEPSEEK_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: agentos-secrets
+                  key: deepseek_api_key
+                  optional: true
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            initialDelaySeconds: 15
+            periodSeconds: 20
+            timeoutSeconds: 5
+          readinessProbe:
+            httpGet:
+              path: /ready
+              port: 8080
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            timeoutSeconds: 3
+          resources:
+            requests:
+              memory: "512Mi"
+              cpu: "500m"
+            limits:
+              memory: "2Gi"
+              cpu: "2"
+          volumeMounts:
+            - name: agentos-data
+              mountPath: /home/agentos/data
+      volumes:
+        - name: agentos-data
+          persistentVolumeClaim:
+            claimName: agentos-pvc
+
+---
+# ── Service ──
+apiVersion: v1
+kind: Service
+metadata:
+  name: agentos
+  labels:
+    app: agentos
+spec:
+  type: ClusterIP
+  selector:
+    app: agentos
+  ports:
+    - name: http
+      port: 80
+      targetPort: 8080
+      protocol: TCP
+    - name: metrics
+      port: 9090
+      targetPort: 9090
+      protocol: TCP
+
+---
+# ── HPA (Horizontal Pod Autoscaler) ──
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: agentos-hpa
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: agentos
+  minReplicas: 2
+  maxReplicas: 10
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageUtilization: 80
+
+---
+# ── PVC ──
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: agentos-pvc
+  labels:
+    app: agentos
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 10Gi
+  storageClassName: standard
+
+---
+# ── Secret (placeholder - fill with actual values) ──
+apiVersion: v1
+kind: Secret
+metadata:
+  name: agentos-secrets
+  labels:
+    app: agentos
+type: Opaque
+stringData:
+  openai_api_key: ""
+  anthropic_api_key: ""
+  google_api_key: ""
+  deepseek_api_key: ""
