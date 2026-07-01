@@ -51,6 +51,15 @@ from agentos.protocols.a2a_streaming import (
     A2AStreamSession,
     A2AStreamManager,
 )
+from agentos.protocols.registry import (
+    DiscoveryCapability,
+    DiscoveryCard,
+    AgentStatus,
+    RegistryEntry,
+    AgentRegistry,
+    A2ARegistryBridge,
+    default_registry,
+)
 
 __all__ = [
     "StructuredOutput",
@@ -90,4 +99,12 @@ __all__ = [
     "TaskProgress",
     "A2AStreamSession",
     "A2AStreamManager",
+    # Agent Registry (v1.14.0)
+    "DiscoveryCapability",
+    "DiscoveryCard",
+    "AgentStatus",
+    "RegistryEntry",
+    "AgentRegistry",
+    "A2ARegistryBridge",
+    "default_registry",
 ]

@@ -1,8 +1,10 @@
 """MCP (Model Context Protocol) client implementation for AgentOS.
 
 Full MCP client with JSON-RPC 2.0, initialize handshake, tool/resource/prompt
-discovery, and dual transport (stdio + SSE). Designed to be used as async
-context manager.
+discovery, dual transport (stdio + SSE), Sampling, Logging, Roots.
+Designed to be used as async context manager.
+
+v1.14.0: Added Sampling, Resource Templates, Logging, Roots support.
 """
 
 from __future__ import annotations
@@ -643,4 +645,17 @@ __all__ = [
     "MCPPromptDef",
     "create_default_server",
     "start_mcp_server",
+    # MCP Sampling, Resource Templates, Logging, Roots (v1.14.0)
+    "MCPClientSampling",
+    "SamplingRequest",
+    "SamplingResponse",
+    "SamplingMessage",
+    "SamplingContentBlock",
+    "SamplingRole",
+    "SamplingError",
+    "mock_llm_call",
+    "MCPResourceTemplate",
+    "MCPLogLevel",
+    "MCPLoggingHandler",
+    "MCPRoot",
 ]
