@@ -49,6 +49,12 @@ from agentos.swarm.tool_registry import (
     ToolCategory, RoutingDecision, RoutingContext, ToolExecutionError,
     create_tool,
 )
+from agentos.security.guard import (
+    GuardPipeline, InputGuard, OutputGuard,
+    PIIDetector, ContentSafetyFilter,
+    create_strict_guard, create_permissive_guard,
+    GuardChainResult,
+)
 
 
 class SwarmTopology(str, Enum):
@@ -237,6 +243,7 @@ class SmartSwarmCoordinator:
         tool_registry: ToolRegistry | None = None,
         tool_router: ToolRouter | None = None,
         tool_executor: ToolExecutor | None = None,
+        guard: GuardPipeline | None = None,
     ):
         """
         Initialize smart swarm coordinator.
@@ -256,6 +263,7 @@ class SmartSwarmCoordinator:
             tool_registry: ToolRegistry for tool catalog (created if None)
             tool_router: ToolRouter for intelligent tool selection (created if None)
             tool_executor: ToolExecutor for safe tool execution (created if None)
+            guard: GuardPipeline for input/output safety filtering (created if None)
         """
         self.topology = topology
         self.max_rounds = max_rounds
@@ -274,6 +282,7 @@ class SmartSwarmCoordinator:
         self.tool_registry = tool_registry or ToolRegistry()
         self.tool_router = tool_router or ToolRouter(self.tool_registry)
         self.tool_executor = tool_executor or ToolExecutor(self.tool_registry)
+        self.guard = guard or create_strict_guard()
 
         # Original topology methods bound for backward compatibility
         self._topo_handlers = {
@@ -334,6 +343,19 @@ class SmartSwarmCoordinator:
         """
         start_time = time.time()
         task_str = str(task)
+
+        # Step 0: Security guard — input filtering
+        guard_result = self.guard.process_input(task_str)
+        if guard_result.blocked:
+            result = SwarmResult(
+                topology=self.topology,
+                mode=ExecutionMode.SMART,
+                output=f"[BLOCKED] Input rejected by guard: {guard_result.blocked_by}. Reason: {', '.join(guard_result.warnings)}",
+                completed=False,
+            )
+            return result
+        if guard_result.final_content != task_str:
+            task_str = guard_result.final_content  # PII-redacted version
 
         # Trace setup
         trace = _trace
@@ -453,6 +475,20 @@ class SmartSwarmCoordinator:
 
         if trace and root:
             trace.end_span(root.id, status="done" if result.success else "failed")
+
+        # Output guard — filter agent output before returning to user
+        if result.outputs:
+            guarded_outputs: dict[str, Any] = {}
+            for key, value in result.outputs.items():
+                output_str = str(value)
+                output_guard = self.guard.process_output(output_str)
+                if output_guard.blocked:
+                    guarded_outputs[key] = f"[BLOCKED by guard: {output_guard.blocked_by}]"
+                elif output_guard.final_content != output_str:
+                    guarded_outputs[key] = output_guard.final_content
+                else:
+                    guarded_outputs[key] = value
+            result.outputs = guarded_outputs
 
         return result
 

@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "nexus-agentos"
-version = "1.9.8"
+version = "1.9.9"
 description = "Agent Operating System — Production-ready multi-model agent framework with Tool-Using Agent, LLM Provider abstraction (5 providers), Function Calling, streaming, retry, checkpoint/resume, swarm coordination, self-evolution autopilot, hybrid search (BM25+dense+rerank), agent evaluation suite (SWE-bench), skill ecosystem bridge, A2A protocol, comprehensive observability, and enterprise features (RBAC, multi-tenancy, audit logging, API key management)."
 readme = "README.md"
 license = {text = "MIT"}

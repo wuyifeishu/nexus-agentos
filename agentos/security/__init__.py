@@ -1,4 +1,7 @@
-"""AgentOS Security — Sandbox, Guardrails, Safety."""
+"""AgentOS Security — Sandbox, Guardrails, Safety.
+
+v1.9.9: Security guardrails with input/output filtering, PII detection, content safety.
+"""
 
 from agentos.security.sandbox_executor import (
     SandboxExecutor,
@@ -8,11 +11,17 @@ from agentos.security.sandbox_executor import (
     DockerSandbox,
 )
 from agentos.security.guard import (
-    Guardrails,
+    GuardPipeline,
+    InputGuard,
+    OutputGuard,
+    PIIDetector,
+    ContentSafetyFilter,
+    GuardChainResult,
     GuardResult,
-    ContentRisk,
-    PIISanitizer,
-    ContentHasher,
+    GuardAction,
+    Severity,
+    create_strict_guard,
+    create_permissive_guard,
 )
 from agentos.security.sandbox import (
     SandboxManager,
@@ -28,21 +37,31 @@ from agentos.security.auditor import (
 )
 
 __all__ = [
+    # Sandbox
     "SandboxExecutor",
     "SandboxMode",
     "SandboxResult",
     "ProcessSandbox",
     "DockerSandbox",
-    "Guardrails",
+    # Guardrails (v1.9.9)
+    "GuardPipeline",
+    "InputGuard",
+    "OutputGuard",
+    "PIIDetector",
+    "ContentSafetyFilter",
+    "GuardChainResult",
     "GuardResult",
-    "ContentRisk",
-    "PIISanitizer",
-    "ContentHasher",
+    "GuardAction",
+    "Severity",
+    "create_strict_guard",
+    "create_permissive_guard",
+    # Sandbox management
     "SandboxManager",
     "Sandbox",
     "SafetyReport",
     "RiskLevel",
     "LLMSafetyAnalyzer",
+    # Auditor
     "SecurityAuditor",
     "AuditFinding",
     "AuditReport",

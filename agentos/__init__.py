@@ -1,5 +1,9 @@
 """NexusAgent - Production-grade Agent Framework SDK
 
+v1.9.5: CodeSandbox (safe code gen + test case validation) + Human-in-the-Loop breakpoints.
+v1.9.4: TaskDecomposer + ResultFusion + EvalFeedbackLoop (P0 three-bottleneck fix).
+v1.9.3: CompositeScorer V2 (BLEU smoothing + LLM-as-Judge), 50+ benchmark cases, 80% pass rate.
+v1.9.2: Swarm MESH 5x parallel acceleration, CompositeScorer (ROUGE-L+BLEU+contains+exact), 14 built-in benchmarks, AutoPilot self-healing.
 v1.7.1: System layer + Desktop client: visual approval engine (Agent applies → user clicks allow/deny), native desktop shell (pywebview wrapper), tiered file/shell/browser ops。
 v1.0.0: Production release — ToolUsingAgent CLI, Mock fallback mode,
 weather demo (`agentos demo`), unified LLM Provider abstraction,
@@ -32,7 +36,7 @@ v1.4.0: +End-to-end examples (multi_agent_research.py, file_ops_agent.py),
 +CLI demo upgraded with self-check mode, +Agent marketplace listing.
 """
 
-__version__ = "1.8.2"
+__version__ = "1.9.5"
 
 # Core - DI system
 from agentos.core.di import (
@@ -126,8 +130,11 @@ from agentos.tools.risk import (
 # Swarm coordinator
 from agentos.swarm.coordinator import (
     SwarmCoordinator,
+    SmartSwarmCoordinator,
     SwarmTopology,
     SwarmMessage,
+    ExecutionMode,
+    SwarmResult,
 )
 
 # Communication layer
@@ -424,6 +431,23 @@ from agentos.swarm import (
     CollaborationResult,
 )
 
+# Code Sandbox (v1.9.5)
+from agentos.swarm.code_sandbox import (
+    CodeSandbox,
+    SandboxResult as CodeSandboxResult,
+    TestCase as CodeTestCase,
+    CodeFeedbackExtractor,
+)
+
+# Human-in-the-Loop (v1.9.5)
+from agentos.swarm.human_loop import (
+    HITLManager,
+    HITLConfig,
+    Breakpoint,
+    BreakpointType,
+    HumanDecision,
+)
+
 # Core extensions (v1.2.9)
 from agentos.core import (
     AgentContext,
@@ -462,13 +486,19 @@ from agentos.health import (
     CheckResult,
 )
 
-# Security extensions (v1.2.9)
+# Security extensions (v1.9.9)
 from agentos.security import (
-    Guardrails,
+    GuardPipeline,
+    InputGuard,
+    OutputGuard,
+    PIIDetector,
+    ContentSafetyFilter,
+    GuardChainResult,
     GuardResult,
-    ContentRisk,
-    PIISanitizer,
-    ContentHasher,
+    GuardAction,
+    Severity,
+    create_strict_guard,
+    create_permissive_guard,
     SandboxManager,
     Sandbox,
     SafetyReport,
@@ -816,8 +846,11 @@ __all__ = [
     "infer_risk_level",
     # Swarm
     "SwarmCoordinator",
+    "SmartSwarmCoordinator",
     "SwarmTopology",
     "SwarmMessage",
+    "ExecutionMode",
+    "SwarmResult",
     # Communication
     "CommunicationLayer",
     "Blackboard",
@@ -991,6 +1024,17 @@ __all__ = [
     "Topology",
     "CollaborationConfig",
     "CollaborationResult",
+    # Code Sandbox (v1.9.5)
+    "CodeSandbox",
+    "CodeSandboxResult",
+    "CodeTestCase",
+    "CodeFeedbackExtractor",
+    # Human-in-the-Loop (v1.9.5)
+    "HITLManager",
+    "HITLConfig",
+    "Breakpoint",
+    "BreakpointType",
+    "HumanDecision",
     # Core extensions (v1.2.9)
     "AgentContext",
     "ContextManager",
@@ -1020,12 +1064,18 @@ __all__ = [
     "HealthStatus",
     "HealthCheck",
     "CheckResult",
-    # Security extensions (v1.2.9)
-    "Guardrails",
+    # Security extensions (v1.9.9)
+    "GuardPipeline",
+    "InputGuard",
+    "OutputGuard",
+    "PIIDetector",
+    "ContentSafetyFilter",
+    "GuardChainResult",
     "GuardResult",
-    "ContentRisk",
-    "PIISanitizer",
-    "ContentHasher",
+    "GuardAction",
+    "Severity",
+    "create_strict_guard",
+    "create_permissive_guard",
     "SandboxManager",
     "Sandbox",
     "SafetyReport",

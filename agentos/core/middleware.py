@@ -102,8 +102,10 @@ class PIIMaskingMiddleware(AgentMiddleware):
     async def process(self, ctx: MiddlewareContext) -> MiddlewareDecision:
         if not ctx.prompt:
             return MiddlewareDecision(allow=True)
-        from agentos.security.guard import PIISanitizer
-        sanitized, count = PIISanitizer.sanitize(ctx.prompt)
+        from agentos.security.guard import PIIDetector
+        detector = PIIDetector(auto_redact=True)
+        sanitized, items = detector.redact(ctx.prompt)
+        count = len(items)
         if count > 0:
             new_ctx = MiddlewareContext(**{**ctx.__dict__})
             new_ctx.prompt = sanitized
