@@ -1,5 +1,7 @@
 """NexusAgent - Production-grade Agent Framework SDK
 
+v1.12.1: Async Parallel Primitives (fan-out/fan-in, parallel_gather, parallel_map, structured concurrency).
+v1.12.0: Letta-style Virtual Memory Pager (page-out/page-in + swap store + smart recall).
 v1.11.0: Background Task Manager + Agent Supervision Tree + Full Checkpoint Integration + Auto-Context Paging.
 v1.10.0: All-in — Deploy (Docker/K8s) + Eval (SWE-bench/GAIA) + Multimodal (Vision/Audio) + Prompt Hub (versioned) + Cost Tracker (pricing).
 v1.9.9: GuardPipeline (PII/Injection/Toxicity safety with strict/permissive modes).
@@ -1333,6 +1335,10 @@ __all__ = [
     # v1.12.0: Virtual Memory Pager
     "MemoryPager", "SwapStore", "MemoryPage", "PagerStats",
     "create_paging_callback", "recall_relevant_memories",
+    # v1.12.1: Async Parallel Primitives
+    "ParallelExecutor", "FanOutExecutor", "FanOutConfig",
+    "TaskThrottler", "ParallelTaskResult", "ParallelTaskStatus", "ParallelGatherResult",
+    "parallel_gather", "parallel_map", "create_parallel_agent_gather",
 ]
 
 # Enterprise (v1.5.5)
