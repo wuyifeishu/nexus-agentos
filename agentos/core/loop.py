@@ -21,6 +21,7 @@ from agentos.observability.metrics import MetricsCollector
 from agentos.observability.cost_analytics import CostAnalytics
 from agentos.core.streaming import StreamChunk, StreamEvent
 from agentos.storage.base import CheckpointStore
+from agentos.checkpoint.base import Checkpoint, CheckpointMetadata, CheckpointBackend
 from agentos.cost.tracker import CostTracker
 from agentos.swarm.coordinator import SwarmCoordinator, SwarmTopology, AgentRole, SwarmResult, MessageBus
 from agentos.comm.layer import CommunicationLayer
@@ -85,6 +86,10 @@ class LoopConfig:
     max_parallel_agents: int = 4
     enable_comm_layer: bool = True
     enable_semantic_cache: bool = True
+    # v1.11.0 — long-running task support
+    checkpoint_backend: CheckpointBackend | None = None  # Full checkpoint backend for crash recovery
+    enable_auto_paging: bool = True    # Auto-evict old memories when context fills
+    auto_page_threshold: float = 0.85  # Page out at 85% context window usage
 
 
 class MaxIterationsExceeded(Exception):
@@ -124,6 +129,7 @@ class AgentLoop:
         sandbox_manager: SandboxManager | None = None,
         tracer: Tracer | None = None,
         checkpoint_store: CheckpointStore | None = None,
+        checkpoint_backend: CheckpointBackend | None = None,
         cost_tracker: CostTracker | None = None,
         config: LoopConfig | None = None,
         on_iteration: Callable | None = None,
@@ -141,6 +147,8 @@ class AgentLoop:
         self.checkpoint_store = checkpoint_store
         self.cost_tracker = cost_tracker or CostTracker.noop()
         self.config = config or LoopConfig()
+        self.checkpoint_backend = checkpoint_backend  # v1.11.0 full checkpoint integration
+        self._auto_page_callback: Callable | None = None  # v1.11.0 auto-paging callback
         self.on_iteration = on_iteration
         self.on_stream = on_stream
         self.on_human_interrupt = on_human_interrupt
@@ -290,6 +298,13 @@ class AgentLoop:
             model_type=self.model_router.model_type,
             tools=self.tool_registry.get_schemas_for_model(self.model_router.model_type),
         )
+
+        # v1.11.0 — auto-page old memories if context nearing limit
+        if self.config.enable_auto_paging and self._auto_page_callback:
+            usage_ratio = self.context_manager.estimate_context_usage()
+            if usage_ratio > self.config.auto_page_threshold:
+                page_count = await self._auto_page_callback(usage_ratio)
+
         resp = await self.model_router.call(ctx)
 
         # 成本记录
@@ -348,15 +363,101 @@ class AgentLoop:
             return cur.extract_target_path(call.arguments) in write_paths
         return False
 
+    # ── v1.11.0 全量 Checkpoint (完整状态快照) ────
+
     async def _save_checkpoint(self, session_id: str, iteration: int):
-        if not self.checkpoint_store: return
-        snap = {"session_id": session_id, "iteration": iteration, "messages": [{"role": m.role, "content": m.content} for m in self.context_manager._messages], "timestamp": time.time()}
-        await self.checkpoint_store.save(session_id, snap)
+        """Save full runtime state snapshot via CheckpointBackend."""
+        backend = self.checkpoint_backend
+        if not backend:
+            # Fallback to thin CheckpointStore
+            if not self.checkpoint_store:
+                return
+            snap = {
+                "session_id": session_id, "iteration": iteration,
+                "messages": [{"role": m.role, "content": m.content} for m in self.context_manager._messages],
+                "timestamp": time.time(),
+            }
+            await self.checkpoint_store.save(session_id, snap)
+            return
+
+        # Full checkpoint via CheckpointBackend
+        try:
+            from datetime import datetime, timezone
+            import uuid
+
+            checkpoint_id = f"ckpt-{session_id}-{iteration:06d}"
+            parent_id = getattr(self, '_last_checkpoint_id', None)
+
+            cp = Checkpoint(
+                metadata=CheckpointMetadata(
+                    thread_id=session_id,
+                    checkpoint_id=checkpoint_id,
+                    step=iteration,
+                    parent_checkpoint_id=parent_id,
+                    created_at=datetime.now(timezone.utc).isoformat(),
+                    tags=["auto", f"iter_{iteration}"],
+                ),
+                messages=[{"role": m.role, "content": m.content} for m in self.context_manager._messages],
+                state={
+                    "iteration": iteration,
+                    "task": self.context_manager.current_task,
+                    "session_id": session_id,
+                    "cost_usd": self.cost_tracker.total_cost,
+                    "reflections": len(self._reflection_history),
+                    "human_interrupts": self._human_interrupts,
+                    "loop_state": self.context_manager.current_state if hasattr(self.context_manager, 'current_state') else "running",
+                },
+                tools_result={},
+                next_node="loop",
+            )
+            await backend.put(cp)
+            self._last_checkpoint_id = checkpoint_id
+
+        except Exception as e:
+            pass  # Checkpoint failure must not crash the loop
 
     async def _try_restore(self, session_id: str) -> int:
-        if not self.checkpoint_store or not self.config.enable_checkpoints: return 0
-        snap = await self.checkpoint_store.load(session_id)
-        return snap.get("iteration", 0) if snap else 0
+        """Restore full state from last checkpoint. Returns iteration to resume from."""
+        backend = self.checkpoint_backend
+        if not backend:
+            # Fallback to thin CheckpointStore
+            if not self.checkpoint_store or not self.config.enable_checkpoints:
+                return 0
+            snap = await self.checkpoint_store.load(session_id)
+            if not snap:
+                return 0
+            iter_count = snap.get("iteration", 0)
+            if iter_count > 0:
+                msgs = snap.get("messages", [])
+                for msg in msgs:
+                    self.context_manager.append_message(msg["role"], msg["content"])
+            return iter_count
+
+        if not self.config.enable_checkpoints:
+            return 0
+
+        try:
+            latest = await backend.get_latest(session_id)
+            if not latest:
+                return 0
+            self._last_checkpoint_id = latest.metadata.checkpoint_id
+            iter_count = latest.metadata.step
+
+            # Restore messages
+            for msg in latest.messages:
+                self.context_manager.append_message(msg.get("role", "user"), msg.get("content", ""))
+
+            # Restore state
+            state = latest.state
+            self._human_interrupts = state.get("human_interrupts", 0)
+
+            return iter_count
+        except Exception:
+            return 0
+
+    def set_auto_paging(self, callback: Callable):
+        """Register callback for automatic memory paging (v1.11.0)."""
+        self._auto_page_callback = callback
 
     def cancel(self):
         self._cancelled = True
