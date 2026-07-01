@@ -8,6 +8,7 @@ being applied.
 
 from __future__ import annotations
 
+import os
 import time
 import uuid
 from dataclasses import dataclass, field
@@ -49,6 +50,9 @@ class EvolutionProposal:
     description: str = ""
     old_value: Any = None
     new_value: Any = None
+    confidence: float = 0.0
+    risk_level: str = "low"
+    target_files: list[str] = field(default_factory=list)
     status: EvolutionStatus = EvolutionStatus.PENDING
     created_at: float = field(default_factory=time.time)
     approved_at: Optional[float] = None
@@ -114,6 +118,9 @@ class EvolutionEngine:
         description: str,
         old_value: Any = None,
         new_value: Any = None,
+        confidence: float = 0.0,
+        risk_level: str = "low",
+        target_files: Optional[list[str]] = None,
         **metadata
     ) -> EvolutionProposal:
         """
@@ -125,6 +132,9 @@ class EvolutionEngine:
             description: Human-readable description
             old_value: Current value
             new_value: Proposed new value
+            confidence: Confidence score (0-1)
+            risk_level: Risk assessment (low/medium/high)
+            target_files: Files to modify
             **metadata: Additional metadata
 
         Returns:
@@ -136,6 +146,9 @@ class EvolutionEngine:
             description=description,
             old_value=old_value,
             new_value=new_value,
+            confidence=confidence,
+            risk_level=risk_level,
+            target_files=target_files or [],
             metadata=metadata,
         )
 
@@ -237,7 +250,7 @@ class EvolutionEngine:
 
     def apply(self, proposal_id: str) -> bool:
         """
-        Apply an approved proposal.
+        Apply an approved proposal. Performs actual file modifications.
 
         Args:
             proposal_id: Proposal ID
@@ -253,8 +266,24 @@ class EvolutionEngine:
             return False
 
         try:
-            # Apply the change
-            # In real implementation, this would update the agent
+            target_files = proposal.target_files or []
+            old_val = proposal.old_value
+            new_val = proposal.new_value
+
+            if target_files and old_val is not None and new_val is not None:
+                for fpath in target_files:
+                    if not os.path.exists(fpath):
+                        continue
+                    with open(fpath, "r") as f:
+                        content = f.read()
+                    old_str = str(old_val)
+                    new_str = str(new_val)
+                    if old_str in content:
+                        content = content.replace(old_str, new_str, 1)
+                        with open(fpath, "w") as f:
+                            f.write(content)
+                        proposal.metadata["modified_file"] = fpath
+
             proposal.status = EvolutionStatus.APPLIED
             proposal.applied_at = time.time()
             return True

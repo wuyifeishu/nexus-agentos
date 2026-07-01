@@ -124,6 +124,8 @@ class Learner:
                 "description": insight.description,
                 "confidence": insight.confidence,
             },
+            confidence=insight.confidence,
+            risk_level="medium" if insight.confidence > 0.5 else "low",
             insight_id=id(insight),
         )
         insight.proposal_id = proposal.id
