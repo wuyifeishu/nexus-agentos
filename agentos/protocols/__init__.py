@@ -1,110 +1,48 @@
-"""Protocols module - Output validation, Agent Card, A2A, MCP, Contracts"""
+"""
+AgentOS Protocols — Standardized agent communication interfaces.
 
-from agentos.protocols.output import (
-    StructuredOutput,
-    validate_output,
-    OutputValidator,
-)
-from agentos.protocols.agent_card import (
-    AgentCard,
-    AgentCardRegistry,
-    AgentCardDiscovery,
-    discover_local,
-)
-from agentos.protocols.a2a import (
-    A2ATask,
-    A2AMessage,
-    A2AArtifact,
-    A2AHandoff,
-    A2ASession,
-    A2AClient,
-    A2AServer,
-    TextPart,
-    FilePart,
-    DataPart,
-    TaskState,
-    new_task,
-    new_handoff,
-)
-from agentos.protocols.mcp import (
-    MCPClient,
-    MCPServerConfig,
-    MCPToolSchema,
-)
-from agentos.protocols.contracts import (
-    AgentContract,
-    AgentCapability,
-    CapabilityDomain,
-    QoSLevel,
-    CapabilityMatcher,
-    ContractRegistry,
-    MatchScore,
-)
-from agentos.protocols.a2a_store import (
-    A2ATaskStore,
-    InMemoryTaskStore,
-    SqliteTaskStore,
-)
-from agentos.protocols.a2a_streaming import (
-    A2AStreamEvent,
-    TaskProgress,
-    A2AStreamSession,
-    A2AStreamManager,
-)
-from agentos.protocols.registry import (
-    DiscoveryCapability,
-    DiscoveryCard,
-    AgentStatus,
-    RegistryEntry,
-    AgentRegistry,
-    A2ARegistryBridge,
-    default_registry,
+Modules:
+- registry.py: Agent Registry with service discovery, heartbeat, load balancing
+- grpc.py: gRPC-based A2A protocol with streaming and TLS/mTLS
+"""
+
+from agentos.protocols.registry import AgentRegistry, AgentInfo
+from agentos.protocols.grpc import (
+    GrpcTaskRequest,
+    GrpcTaskResponse,
+    GrpcHeartbeat,
+    GrpcStreamChunk,
+    TaskStatus,
+    GrpcStatusCode,
+    GrpcAgentService,
+    DefaultAgentService,
+    GrpcServer,
+    GrpcServerConfig,
+    GrpcClient,
+    GrpcClientConfig,
+    GrpcFrameCodec,
+    SERVICE_NAME,
+    create_self_signed_cert,
 )
 
 __all__ = [
-    "StructuredOutput",
-    "validate_output",
-    "OutputValidator",
-    "AgentCard",
-    "AgentCardRegistry",
-    "AgentCardDiscovery",
-    "discover_local",
-    "A2ATask",
-    "A2AMessage",
-    "A2AArtifact",
-    "A2AHandoff",
-    "A2ASession",
-    "A2AClient",
-    "A2AServer",
-    "TextPart",
-    "FilePart",
-    "DataPart",
-    "TaskState",
-    "new_task",
-    "new_handoff",
-    "MCPClient",
-    "MCPServerConfig",
-    "MCPToolSchema",
-    "AgentContract",
-    "AgentCapability",
-    "CapabilityDomain",
-    "QoSLevel",
-    "CapabilityMatcher",
-    "ContractRegistry",
-    "MatchScore",
-    "A2ATaskStore",
-    "InMemoryTaskStore",
-    "SqliteTaskStore",
-    "A2AStreamEvent",
-    "TaskProgress",
-    "A2AStreamSession",
-    "A2AStreamManager",
-    # Agent Registry (v1.14.0)
-    "DiscoveryCapability",
-    "DiscoveryCard",
-    "AgentStatus",
-    "RegistryEntry",
+    # Registry
     "AgentRegistry",
-    "A2ARegistryBridge",
-    "default_registry",
+    "AgentInfo",
+    # gRPC
+    "GrpcTaskRequest",
+    "GrpcTaskResponse",
+    "GrpcHeartbeat",
+    "GrpcStreamChunk",
+    "TaskStatus",
+    "GrpcStatusCode",
+    "GrpcAgentService",
+    "DefaultAgentService",
+    "GrpcServer",
+    "GrpcServerConfig",
+    "GrpcClient",
+    "GrpcClientConfig",
+    "GrpcFrameCodec",
+    "SERVICE_NAME",
+    "create_self_signed_cert",
 ]
