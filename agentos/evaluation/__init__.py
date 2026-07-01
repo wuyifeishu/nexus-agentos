@@ -1,11 +1,13 @@
-"""Agent Evaluation Framework for AgentOS.
+"""Agent Evaluation Framework for AgentOS v2.
 
 Golden dataset management, regression testing, CI exports,
-statistical analysis, and auto-scoring across multiple dimensions.
+statistical analysis, auto-scoring across multiple dimensions,
+SWE-bench style eval, multi-round evaluation, hallucination detection.
 
 Sub-modules:
 - scorers: ROUGE-L, BLEU, Semantic, Exact, Contains scoring + CompositeScorer
 - regression: RegressionRunner, StatisticalRunner, JUnit/JSON exports
+- suite: EvalSuiteRunner, SWEBenchEvaluator, HallucinationDetector, Leaderboard (v2)
 """
 
 from __future__ import annotations
@@ -458,3 +460,23 @@ def quick_eval(
         return loop.run_until_complete(evaluator.run())
     finally:
         loop.close()
+
+
+# ── EvalSuite v2 imports ────────────────────────────────────────────
+
+from agentos.evaluation.suite import (
+    EvalSuiteRunner,
+    SWEBenchEvaluator,
+    HallucinationDetector,
+    Leaderboard,
+    MultiRoundEvaluator,
+)
+
+__all__ = [
+    "GoldenCase", "GoldenDataset", "ScoreDetail", "EvalReport",
+    "Scorer", "EvalConfig", "Evaluator",
+    "load_dataset", "save_dataset", "quick_eval",
+    # Suite v2
+    "EvalSuiteRunner", "SWEBenchEvaluator", "HallucinationDetector",
+    "Leaderboard", "MultiRoundEvaluator",
+]

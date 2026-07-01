@@ -4,6 +4,64 @@ All notable changes to NexusAgentOS.
 
 ---
 
+## [1.9.0] — 2026-07-01
+
+### Added — 五大模块齐发
+
+#### 生态桥接器 (`agentos/marketplace/bridge.py`, 512 行)
+- **EcosystemBridge**: 一键桥接到外部技能生态。自动将 Claude Code 扩展、Cursor 规则、Custom GPT 指令、LangChain 工具转换为 AgentOS Skill Manifest。
+- **4 个适配器**: ClaudeCodeAdapter（自动下载扩展仓库）、CursorAdapter（解析 .cursorrules/.cursor/rules/）、CustomGPTAdapter（解析 GPT 指令模板）、LangChainAdapter（LangChain 工具 → ToolDef）。
+- **批量桥接**: `bridge("claude-code:*")` 桥接 Claude Code 所有扩展；`batch_bridge()` 同时桥接多个生态，统一导入 SkillRegistry。
+- **EcosystemFormat**: `claude-code` / `cursor` / `custom-gpt` / `langchain` 四种格式枚举。
+- **AdapterFactory**: 按格式自动分发到对应适配器。
+
+#### 自进化闭环 v2 (`agentos/evolution/autopilot.py`, 549 行)
+- **AutoPilot**: 全自动闭环自进化管道。行为信号 → AutoPilot 分析 → LLM 生成代码 diff → 自动测试 → AB 评测 → 审批/自动合入。
+- **4 种模式**: SUGGEST_ONLY（仅建议）/ ASK_BEFORE（每次确认）/ CONFIDENCE_GATED（阈值门控）/ FULL_AUTO（全自动）。
+- **CodeGenerator**: LLM 驱动的代码 diff 生成器，输出标准 unified diff。
+- **AutoTester**: 自动运行回归测试套件，对比修改前后通过率。
+- **RollbackManager**: 即时回滚到上一个已知良好状态，带备份归档。
+- **ABEvaluator**: 新旧版本并行对比评测，统计显著性检验。
+- **EvolutionJournal**: 完整的审计日志，记录每次进化的完整轨迹。
+
+#### 评估套件 v2 (`agentos/evaluation/suite.py`, 604 行)
+- **EvalSuiteRunner**: 全评估管道编排器，支持多维度评估的流水线执行。
+- **SWEBenchEvaluator**: SWE-bench 风格端到端任务评估（仓库编辑 + 测试验证）。
+- **MultiRoundEvaluator**: 多轮对话评估，含上下文保持和状态一致性检查。
+- **HallucinationDetector**: 幻觉检测器，含事实编造检测、自矛盾检测、引用来源验证。
+- **Leaderboard**: 版本性能排行榜，追踪每次发布的评测指标变化。
+
+#### Swarm 编排引擎 v2 (`agentos/orchestration/swarm_coordinator.py`, 789 行)
+- **SwarmCoordinator**: 多 Agent 群体编排器。动态任务分配、Inter-Agent 消息总线、冲突解决、共识协议。
+- **MessageBus**: Pub/sub 消息总线，支持点对点、广播、主题订阅、请求-应答。
+- **TaskAllocator**: 负载感知的动态任务分配器，考虑能力匹配、当前负载、任务优先级、亲和性。
+- **ConflictResolver**: Agent 冲突检测与解决。多数投票、加权投票、偏好排序、共识构建。
+- **SwarmTopology**: 星形 / 网状 / 环形 / 树形 / DAG / 混合 六种拓扑。
+- **HealthMonitor**: 心跳监控，死 Agent 检测，自动任务重分配。
+
+#### 混合搜索引擎 (`agentos/rag/hybrid_search.py`, 583 行)
+- **HybridSearchEngine**: 稠密 + 稀疏 + 重排三阶段检索管道。
+- **BM25Retriever**: 纯 Python BM25 实现，零依赖倒排索引，支持中文分词。
+- **DenseRetriever**: 语义嵌入检索包装器，兼容 ChromaDB。
+- **CrossEncoderReranker**: 跨编码器重排，支持 HuggingFace 模型和 LLM 判断两种模式。
+- **CitationTracker**: 引用追踪与验证，自动检测未引用声明（潜在幻觉）。
+- **FusionMethod**: RRF / 加权和 / 级联 三种融合算法。
+
+### Changed
+- LLM 生态: 5 providers (OpenAI, DeepSeek, Anthropic, Ollama, Pangu)
+- 版本: 1.8.3 → 1.9.0
+- 模块: evolution / evaluation / orchestration / rag / marketplace 五个 __init__ 全部更新导出
+
+### 统计
+- 新增代码: ~3,037 行
+- 新增模块: 5 个文件
+- 新增类: 50+ 个类/数据类
+- 新增适配器: 4 个生态格式
+- 新增拓扑: 6 种 Swarm 拓扑
+- 新增评测维度: 3 种（SWE-bench / 多轮 / 幻觉检测）
+
+---
+
 ## [1.8.3] — 2026-07-01
 
 ### Added

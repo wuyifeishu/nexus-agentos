@@ -1,4 +1,4 @@
-"""Orchestration module — Graph orchestrator, A2A routing, graph executor, parallel scheduler"""
+"""Orchestration module — Graph orchestrator, A2A routing, graph executor, parallel scheduler, swarm coordinator"""
 
 from agentos.orchestration.graph import (
     GraphOrchestrator,
@@ -22,6 +22,20 @@ from agentos.orchestration.parallel import (
     ParallelExecutor,
     RunResult,
 )
+from agentos.orchestration.swarm_coordinator import (
+    SwarmCoordinator,
+    AgentInfo,
+    AgentRole,
+    SwarmTask,
+    SwarmTopology,
+    TaskPriority,
+    TaskStatus as SwarmTaskStatus,
+    TaskAllocator,
+    ConflictResolver,
+    ConflictType,
+    MessageBus,
+    SwarmMessage,
+)
 
 __all__ = [
     "GraphOrchestrator",
@@ -38,4 +52,17 @@ __all__ = [
     "GraphResult",
     "ParallelExecutor",
     "RunResult",
+    # Swarm Coordinator v2
+    "SwarmCoordinator",
+    "AgentInfo",
+    "AgentRole",
+    "SwarmTask",
+    "SwarmTopology",
+    "TaskPriority",
+    "SwarmTaskStatus",
+    "TaskAllocator",
+    "ConflictResolver",
+    "ConflictType",
+    "MessageBus",
+    "SwarmMessage",
 ]

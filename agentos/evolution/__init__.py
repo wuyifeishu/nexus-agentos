@@ -1,9 +1,10 @@
-"""Evolution module — Self-evolution system.
+"""Evolution module — Self-evolution system v2.
 
 Components:
   - EvolutionEngine: Proposal lifecycle management (pending → approved → applied)
   - SignalCollector: User behavior signal collection and analysis
   - Learner: From signals to insights to evolution proposals
+  - AutoPilot: Closed-loop self-evolution pipeline (v2, auto-generate/appply/validate diffs)
 """
 
 from agentos.evolution.engine import (
@@ -22,6 +23,16 @@ from agentos.evolution.learner import (
     Learner,
     LearningInsight,
 )
+from agentos.evolution.autopilot import (
+    AutoPilot,
+    AutoPilotMode,
+    CodeGenerator,
+    AutoTester,
+    RollbackManager,
+    ABEvaluator,
+    EvolutionJournal,
+    EvolutionRun,
+)
 
 __all__ = [
     # Engine
@@ -30,4 +41,7 @@ __all__ = [
     "BehaviorSignal", "SignalCollector", "SignalSummary", "SignalType", "FeedbackPolarity",
     # Learner
     "Learner", "LearningInsight",
+    # AutoPilot v2
+    "AutoPilot", "AutoPilotMode", "CodeGenerator", "AutoTester",
+    "RollbackManager", "ABEvaluator", "EvolutionJournal", "EvolutionRun",
 ]

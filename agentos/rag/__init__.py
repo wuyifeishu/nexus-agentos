@@ -1,12 +1,23 @@
 """
-RAG 模块入口 — 向量存储 / 文档加载 / 检索生成管道。
+RAG 模块入口 — 向量存储 / 文档加载 / 检索生成管道 / 混合搜索。
 
 v1.5.1: ChromaDB 向量存储 + PDF/DOCX/TXT 文档加载 + 基础 RAG Pipeline。
+v1.9.0: 混合搜索 + BM25 稀疏检索 + 跨编码器重排 + 引用追踪。
 """
 
 from agentos.rag.store import VectorStore, ChromaStore
 from agentos.rag.loader import DocumentLoader, load_file, load_directory
 from agentos.rag.pipeline import RAGPipeline
+from agentos.rag.hybrid_search import (
+    HybridSearchEngine,
+    BM25Retriever,
+    DenseRetriever,
+    CrossEncoderReranker,
+    CitationTracker,
+    Citation,
+    SearchResult,
+    FusionMethod,
+)
 
 # 向后兼容别名
 BaseVectorStore = VectorStore
@@ -39,6 +50,15 @@ __all__ = [
     "load_file",
     "load_directory",
     "RAGPipeline",
+    # 混合搜索 v1.9.0
+    "HybridSearchEngine",
+    "BM25Retriever",
+    "DenseRetriever",
+    "CrossEncoderReranker",
+    "CitationTracker",
+    "Citation",
+    "SearchResult",
+    "FusionMethod",
     # 向后兼容
     "BaseVectorStore",
     "FAISSVectorStore",
