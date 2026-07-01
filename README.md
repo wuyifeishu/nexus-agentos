@@ -1,304 +1,205 @@
+# AgentOS - Universal Agent Runtime
 
-# Nexus AgentOS
+[![PyPI version](https://img.shields.io/pypi/v/nexus-agentos.svg)](https://pypi.org/project/nexus-agentos/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
 
-**Production-grade multi-model agent framework. Build autonomous agents that run on anyone's machine — zero config, three providers, full observability.**
+**AgentOS** is an open-source universal agent runtime designed for the multi-agent era. It provides a unified execution environment where AI agents can discover, install, and compose skills from a decentralized marketplace, while connecting to any MCP-compatible tool server.
 
-<p align="center">
-  <a href="https://pypi.org/project/nexus-agentos/"><img src="https://img.shields.io/pypi/v/nexus-agentos?label=PyPI" alt="PyPI"></a>
-  <a href="#"><img src="https://img.shields.io/badge/python-3.11%2B-blue" alt="Python"></a>
-  <a href="#"><img src="https://img.shields.io/badge/license-MIT-green" alt="License"></a>
-  <a href="#"><img src="https://img.shields.io/badge/code%20style-ruff-000000" alt="Ruff"></a>
-</p>
-
----
-
-## Why AgentOS?
-
-Most agent frameworks force you to wire up providers, retries, guardrails, and observability by hand. AgentOS ships them as first-class citizens — built into the core architecture, not bolted on.
-
-| Capability | AgentOS | LangChain | CrewAI | AutoGen |
-|---|---|---|---|---|
-| **Multi-provider auto-detect** | ✅ Zero-config | ❌ Manual | ❌ | ❌ |
-| **A2A Protocol** (Agent-to-Agent) | ✅ Native | ❌ | ❌ | ❌ |
-| **MCP Protocol** (Tool integration) | ✅ Native | ✅ External | ❌ | ❌ |
-| **Memory Pyramid** (STM→WM→LTM) | ✅ Built-in | ❌ | ❌ | ❌ |
-| **HITL** (Human-in-the-Loop) | ✅ Built-in | ❌ | ❌ | ❌ |
-| **Sandbox execution** | ✅ Process/Docker | ❌ | ❌ | ❌ |
-| **Guardrails** (PII/toxicity/injection) | ✅ 6 built-in | ❌ | ❌ | ❌ |
-| **OpenTelemetry bridge** | ✅ Native | ❌ | ❌ | ❌ |
-| **DI Container** | ✅ Built-in | ❌ | ❌ | ❌ |
-| **Streaming** (real-time) | ✅ | ✅ | ❌ | ❌ |
-| **Agent Marketplace** | ✅ Built-in | ❌ | ❌ | ❌ |
-
----
-
-## Quick Start
-
-```bash
+```
 pip install nexus-agentos
 ```
 
-### 1. Configure (recommended) — interactive wizard
+## Why AgentOS?
+
+| Problem | AgentOS Solution |
+|---------|-----------------|
+| Agents siloed in different frameworks | **Universal runtime** — one env runs OpenClaw, LangChain, custom agents |
+| No marketplace for agent skills | **Built-in Skill Market** — devs upload, users install, admins review |
+| MCP servers fragmented | **8 built-in MCP servers**, 34 tools out of the box |
+| No TUI for agent management | **Terminal UI** (Textual) — file browser, skill manager, task runner |
+| Hard to compose multi-agent workflows | **Sub-agent dispatch** — agents delegate to specialists automatically |
+
+## Quick Start
+
+### 1. Install
 
 ```bash
-agentos init
+pip install nexus-agentos
+
+# Or from source
+git clone https://github.com/wuyifeishu/nexus-agentos.git
+cd nexus-agentos && pip install -e .
 ```
 
-Guides you through choosing a provider (OpenAI / DeepSeek / Anthropic), pasting your API key, and tests the connection — no manual `export` needed.
-
-### 2. Run a task
+### 2. Launch the Skill Marketplace
 
 ```bash
-agentos "列出当前目录的文件"
+python -m agentos.server.marketplace_platform
 ```
 
-### 3. Or try the demo (no API key needed)
+Open `http://localhost:8899/static/platform.html` — you'll see the full marketplace with:
+- **Browse**: search/discover 64 built-in skills across 11 categories
+- **Login/Register**: JWT auth for developers
+- **Upload**: zip your skill with a `skill.yaml` manifest
+- **Review**: admin panel for security scanning, approve/reject
+
+### 3. Run the Terminal UI
 
 ```bash
-agentos demo
+python -m agentos.desktop
 ```
 
-> **Provider auto-detect**: AgentOS detects `OPENAI_API_KEY`, `DEEPSEEK_API_KEY`, or `ANTHROPIC_API_KEY` automatically. Run `agentos init` to set one up in 30 seconds.
-
----
+Ctrl+M opens the Market Panel. Ctrl+F opens File Browser. Full keyboard-driven.
 
 ## Architecture
 
 ```
-┌──────────────────────────────────────────────────────────┐
-│                     CLI / API Server                      │
-├──────────────────────────────────────────────────────────┤
-│  ToolAgent (autonomous multi-step reasoning)              │
-├────────────┬────────────┬─────────────┬─────────────────┤
-│  Guardrails│  Sandbox   │   Memory    │  Observability   │
-│ (PII/Toxic │ (Process/  │ (STM→WM→LTM)│ (OTel Bridge +   │
-│  /Injection│  Docker)   │             │  Cost Analytics) │
-├────────────┴────────────┴─────────────┴─────────────────┤
-│  LLM Providers: OpenAI │ DeepSeek │ Anthropic            │
-│  A2A Protocol · MCP Protocol · Sequential Pipelines       │
-│  Sub-agent Orchestration · DI Container · Plugin System  │
-└──────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────┐
+│                    AgentOS Runtime                       │
+│  ┌─────────┐  ┌──────────┐  ┌───────────────────────┐  │
+│  │   TUI   │  │  Agent   │  │   Sub‑Agent Dispatcher │  │
+│  │(Textual)│  │  Engine  │  │  (search/browser/file) │  │
+│  └─────────┘  └──────────┘  └───────────────────────┘  │
+│  ┌─────────┐  ┌──────────┐  ┌───────────────────────┐  │
+│  │  Skill  │  │   MCP    │  │   Marketplace Server   │  │
+│  │Registry │  │ Registry │  │  (FastAPI + SQLite)    │  │
+│  └─────────┘  └──────────┘  └───────────────────────┘  │
+│  64 Skills  │  8 Servers   │  Upload/Review/Download  │
+└─────────────────────────────────────────────────────────┘
 ```
 
----
+## Built-in MCP Servers
 
-## Standout Features
+| Server | Tools | Description |
+|--------|-------|-------------|
+| `filesystem` | 7 | read_file, write_file, list_directory, search_files, get_file_info, create_directory, move_file |
+| `webfetch` | 3 | fetch_url, fetch_json, check_url |
+| `memory` | 6 | store_memory, retrieve_memory, search_memory, list_categories, delete_memory, update_memory |
+| `search` | 4 | web_search, news_search, image_search, suggest |
+| `git` | 4 | git_status, git_log, git_diff, git_branch |
+| `shell` | 3 | run_command, system_info, disk_usage |
+| `code` | 3 | run_python, run_shell, lint_code |
+| `text` | 4 | count_tokens, extract_regex, summarize_text, format_json |
 
-### 1. Provider Auto-Detection & Resiliency
+All MCP servers are **zero-dependency**, pure Python implementations. No external processes required.
 
-No manual provider wiring. Set an env var, framework auto-detects. Built-in retry with exponential backoff and circuit breaker.
+## Skill Categories (64 built-in)
 
-```python
-from agentos.llm import create_provider
+| Category | Count | Examples |
+|----------|-------|----------|
+| Development | 14 | github, docker, git, kubernetes, terraform, postgres, redis |
+| Productivity | 8 | google-workspace, microsoft-365, calendar, email, todoist |
+| Communication | 7 | slack, discord, notion, jira, teams, webex, zendesk |
+| Data | 8 | sql-query, csv-tools, bigquery, snowflake, mongodb, elasticsearch |
+| Document | 5 | docx, xlsx, pptx, pdf, markdown |
+| Media | 5 | image-edit, video-process, audio-transcribe, screen-capture, svg-create |
+| System | 4 | system-info, file-watch, cron-scheduler, network-tools |
+| Security | 4 | secret-manager, threat-scanner, 1password, auth-proxy |
+| AI | 5 | prompt-optimizer, token-counter, embedding-service, langchain-tools, rag-pipeline |
+| Uncategorized | 4 | weather, translation, currency-converter, timezone |
 
-# Auto-detect from env
-provider = create_provider()  # reads OPENAI_API_KEY → DeepSeek → Anthropic → mock fallback
+## Skill Marketplace Platform
 
-# Or explicit
-provider = create_provider("anthropic")  # claude-sonnet-4
-```
+A production-ready marketplace for the AgentOS ecosystem:
 
-### 2. A2A Protocol — Agent-to-Agent Communication
+### For Developers
+- Register/login with email & password (bcrypt + JWT)
+- Upload `.zip` skill packages with `skill.yaml`/`manifest.json`
+- Automatic security scanning on upload: dangerous imports, shell injection, obfuscation, hardcoded keys, excessive permissions
+- Track downloads and reviews
+- Developer profile pages
 
-Agents communicate via Google’s A2A standard. Discover capabilities, negotiate tasks, exchange results — all with a typed protocol.
+### For Users
+- Browse/search skills by name, category, tags
+- One-click install from any ecosystem source
+- Rate and review installed skills
 
-```python
-from agentos.protocols.a2a import A2AProtocol, A2AMessage, AgentCard
-from agentos.orchestration.a2a_router import A2ARouter
+### For Admins
+- Review queue with security findings per skill
+- Approve/reject with comments
+- Skill quality and safety enforcement
 
-router = A2ARouter()
-router.register(researcher_agent)
-router.register(analyst_agent)
-
-result = router.route(A2AMessage(
-    sender="user",
-    task="Research quantum computing advances, then analyze implications",
-))
-```
-
-### 3. Memory Pyramid — Context That Scales
-
-Three-tier memory architecture inspired by cognitive science:
-
-| Tier | Purpose | Mechanism |
-|------|---------|-----------|
-| **Short-Term** | Current conversation | Sliding window |
-| **Working** | Active context | Relevance-scored buffer |
-| **Long-Term** | Persistent knowledge | Vector store + compression |
-
-```python
-from agentos.memory.pyramid import MemoryPyramid
-
-memory = MemoryPyramid()
-memory.store("User prefers Python over JavaScript", tier="long_term")
-context = memory.retrieve("What language should I use?", top_k=5)
-```
-
-### 4. HITL — Human-in-the-Loop Approvals
-
-Critical actions pause for human approval. Pre-built presets for finance, content moderation, and code execution.
-
-```python
-from agentos.hitl import HumanApprover, RiskPresets
-
-approver = HumanApprover(preset=RiskPresets.FINANCE)
-if approver.requires_approval(action="transfer", amount=5000):
-    approver.request(action="Transfer $5000", context="Portfolio rebalance")
-    # Agent pauses until human responds
-```
-
-### 5. Guardrails — Safety by Default
-
-Six built-in guardrails validate inputs before they reach the LLM, and sanitize outputs before they reach the user.
-
-```python
-from agentos.guardrails import build_default_rules, GuardrailEngine
-
-engine = GuardrailEngine(rules=build_default_rules())
-result = engine.validate_input("Drop table users; --")  # blocked: code injection
-```
-
-| Rule | Purpose |
-|------|---------|
-| `PIIRule` | Redact emails, phones, SSNs |
-| `KeywordBlockRule` | Block forbidden keywords |
-| `CodeInjectionRule` | Detect SQL/command injection |
-| `ToxicityRule` | Filter toxic/hateful content |
-| `LengthLimitRule` | Cap input/output size |
-| `RegexRule` | Custom pattern enforcement |
-
-### 6. Sandbox Execution
-
-Execute untrusted code in process-level or Docker sandboxes.
-
-```python
-from agentos.security import SandboxExecutor, SandboxMode
-
-sandbox = SandboxExecutor(mode=SandboxMode.DOCKER)
-result = sandbox.execute("print(1 + 2)")  # runs isolated, returns stdout+stderr
-```
-
-### 7. OpenTelemetry Bridge
-
-Drop-in observability with existing OTel infrastructure.
-
-```python
-from agentos.observability import OTelBridge
-
-bridge = OTelBridge(service_name="agentos-research-agent")
-with bridge.trace("research_task"):
-    result = agent.run("Research topic X")
-# Traces appear in your existing Jaeger/Zipkin/Tempo
-```
-
-### 8. Swarm Coordination
-
-Multi-agent topologies with handoff, debate, voting, and review-pass patterns.
-
-```python
-from agentos.swarm import SwarmCoordinator, SwarmTopology
-
-swarm = SwarmCoordinator(topology=SwarmTopology.HIERARCHICAL)
-swarm.add_agent("lead", lead_agent)
-swarm.add_agent("worker_1", worker_1, parent="lead")
-swarm.add_agent("worker_2", worker_2, parent="lead")
-result = swarm.execute("Analyze quarterly report and generate summary")
-```
-
----
-
-## Python API
-
-```python
-from agentos.llm import create_provider
-from agentos.llm.base import Tool, ToolParameter
-from agentos.agent import ToolAgent, ToolExecutor, AgentConfig
-
-# 1. Create provider (auto-detects from env)
-provider = create_provider("openai")
-
-# 2. Register tools
-executor = ToolExecutor()
-executor.register(
-    Tool.from_function("get_weather", "Get city weather", {
-        "city": ToolParameter(type="string", description="City name"),
-    }),
-    lambda city: f"{city}: 22°C sunny",
-)
-
-# 3. Create agent and run
-agent = ToolAgent(provider, executor, config=AgentConfig(temperature=0.0))
-result = agent.run("What's the weather in Tokyo?")
-
-print(result.final_answer)       # "Tokyo: 22°C sunny"
-print(f"Cost: ${result.total_cost_usd:.6f}")
-print(f"Time: {result.total_duration_ms}ms")
-```
-
-## CLI
+### API Endpoints
 
 ```
-agentos <task>               Run a task with autonomous agent
-agentos demo                 Run interactive demo
-agentos serve                Start API server (port 8080)
-agentos skills               List agent marketplace skills
-agentos version              Show version
+POST   /api/auth/register          - Create developer account
+POST   /api/auth/login             - Login, receive JWT
+GET    /api/skills                 - Browse/search published skills
+GET    /api/skills/{id}            - Skill detail
+GET    /api/skills/{id}/download   - Download skill zip
+POST   /api/skills/upload          - Upload new skill (auth required)
+GET    /api/my/skills              - My uploaded skills
+GET    /api/developers/{username}  - Developer profile
+POST   /api/admin/review/{id}      - Approve/reject (admin)
+GET    /api/admin/review-queue     - Pending reviews (admin)
+GET    /api/categories             - Category listing
 ```
 
-## Provider Auto-Detection
+## Security Scanning
 
-| Env Var | Provider | Default Model |
-|---------|----------|---------------|
-| `OPENAI_API_KEY` | OpenAI | `gpt-4o-mini` |
-| `DEEPSEEK_API_KEY` | DeepSeek | `deepseek-chat` |
-| `ANTHROPIC_API_KEY` | Anthropic | `claude-sonnet-4` |
-| _(none set)_ | Mock | Demo mode |
+Every uploaded skill is automatically scanned for:
 
----
-
-## Installation
-
-```bash
-pip install nexus-agentos
-```
-
-Python 3.11+ required. Optional dependencies:
-
-```bash
-pip install "nexus-agentos[evaluation]"   # rouge-score, sentence-transformers
-pip install "nexus-agentos[rag]"          # faiss-cpu, chromadb, tiktoken
-pip install "nexus-agentos[dev]"          # pytest, mypy, ruff
-```
-
----
-
-## Examples
-
-| Example | Description |
-|---------|-------------|
-| [`weather_agent.py`](agentos/agent/examples/weather_agent.py) | Multi-tool agent; weather + stock queries |
-| [`llm_quickstart.py`](agentos/llm/examples/llm_quickstart.py) | Provider API basics |
-| [`llm_chat_demo.py`](agentos/llm/examples/llm_chat_demo.py) | Multi-turn chat + streaming + function calling |
-
-Full end-to-end examples in [`examples/`](examples/):
-
-| Example | What it demonstrates |
-|---------|---------------------|
-| [`multi_agent_research.py`](examples/multi_agent_research.py) | Swarm + A2A + Memory Pyramid + streaming |
-| [`file_ops_agent.py`](examples/file_ops_agent.py) | Sandbox + Guardrails + file tools + HITL |
-
----
+| Check | Severity | Description |
+|-------|----------|-------------|
+| Dangerous imports | Critical | `os.system`, `subprocess`, `socket`, `ctypes` |
+| Shell injection | Critical | `os.system()`, `eval()`, `exec()`, `__import__()` |
+| Code obfuscation | High | Base64-encoded payloads, eval chains |
+| Hardcoded secrets | High | API keys, tokens, passwords in source |
+| File permission escalation | Medium | `chmod 777`, `os.chown` |
+| Network exfiltration | High | Suspicious `requests.post` to unknown hosts |
 
 ## Roadmap
 
-| Version | Focus |
-|---------|-------|
-| `1.4.x` | End-to-end examples, polished README, CLI improvements |
-| `1.5.x` | Web UI dashboard, multi-modal (vision), RAG pipeline |
-| `2.0.0` | Stable API, production deployment guides, community templates |
+- [x] Universal Agent Runtime
+- [x] 64 Built-in Skills
+- [x] 8 MCP Servers (34 tools)
+- [x] Skill Marketplace with web UI
+- [x] Developer registration & upload
+- [x] Security scanning pipeline
+- [x] Admin review queue
+- [x] Terminal UI (TUI)
+- [ ] Multi-agent orchestration dashboard
+- [ ] Skill dependency resolution
+- [ ] Federated marketplace discovery
+- [ ] Blockchain-based skill provenance
 
----
+## Contributing
+
+We welcome contributions! The Skill Marketplace is our highest-priority area.
+
+1. Fork the repo
+2. Create a feature branch: `git checkout -b feat/amazing-skill`
+3. Write your skill with a `skill.yaml` manifest
+4. Upload to the marketplace or submit a PR
+5. If you want to contribute to the platform itself, check the issues labeled `good first issue`
+
+### Skill Manifest Format
+
+```yaml
+name: my-awesome-skill
+version: 0.1.0
+description: Does something awesome
+author:
+  name: Your Name
+  url: https://github.com/yourname
+category: dev
+tags: [python, automation]
+entrypoint: main.py
+requires:
+  python: ">=3.10"
+  packages: [requests, httpx]
+license: MIT
+```
 
 ## License
 
-MIT © AgentOS Team
+MIT License. See [LICENSE](LICENSE) for details.
+
+## Star History
+
+[![Star History Chart](https://api.star-history.com/svg?repos=wuyifeishu/nexus-agentos&type=Date)](https://star-history.com/#wuyifeishu/nexus-agentos&Date)
+
+---
+
+Built with ❤️ by the AgentOS community. Let's make the Agent OS ecosystem thrive.
