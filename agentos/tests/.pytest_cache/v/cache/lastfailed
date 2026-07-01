@@ -1,0 +1,5 @@
+{
+  "test_a2a.py::TestA2Server::test_get_task": true,
+  "test_a2a.py::TestA2Server::test_list_tasks_by_state": true,
+  "test_a2a.py::TestA2Server::test_cleanup": true
+}
