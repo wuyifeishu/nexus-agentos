@@ -1,5 +1,7 @@
 """NexusAgent - Production-grade Agent Framework SDK
 
+v1.10.0: All-in — Deploy (Docker/K8s) + Eval (SWE-bench/GAIA) + Multimodal (Vision/Audio) + Prompt Hub (versioned) + Cost Tracker (pricing).
+v1.9.9: GuardPipeline (PII/Injection/Toxicity safety with strict/permissive modes).
 v1.9.5: CodeSandbox (safe code gen + test case validation) + Human-in-the-Loop breakpoints.
 v1.9.4: TaskDecomposer + ResultFusion + EvalFeedbackLoop (P0 three-bottleneck fix).
 v1.9.3: CompositeScorer V2 (BLEU smoothing + LLM-as-Judge), 50+ benchmark cases, 80% pass rate.
@@ -36,7 +38,7 @@ v1.4.0: +End-to-end examples (multi_agent_research.py, file_ops_agent.py),
 +CLI demo upgraded with self-check mode, +Agent marketplace listing.
 """
 
-__version__ = "1.9.5"
+__version__ = "1.10.0"
 
 # Core - DI system
 from agentos.core.di import (
@@ -1313,6 +1315,14 @@ __all__ = [
     "CDPBrowser", "BrowserSession", "BrowserAction", "BrowserResult",
     # Desktop Client (v1.7.0) — P1: One-click desktop
     "DesktopServer", "DesktopConfig", "launch_desktop",
+    # v1.10.0: Evaluation (SWE-bench + GAIA)
+    "EvalMetric", "EvalSuite", "EvalCase", "EvalSample", "EvalResult", "EvalReport",
+    "Scorer", "ExactMatchScorer", "F1Scorer", "ROUGELScorer", "get_scorer",
+    "SWEBenchLoader", "GAIALoader",
+    "EvalRunner", "EvalRegistry", "evaluate_quick",
+    # v1.10.0: Prompt Hub
+    "PromptType", "PromptTag", "PromptVersion", "PromptHub",
+    "BUILTIN_PROMPTS", "create_default_hub",
 ]
 
 # Enterprise (v1.5.5)
@@ -1346,6 +1356,20 @@ from agentos.desktop.server import (
     DesktopServer, DesktopConfig,
 )
 from agentos.desktop.server import launch_desktop
+
+# ── v1.10.0: Evaluation Framework (SWE-bench + GAIA) ──
+from agentos.eval.benchmark import (
+    EvalMetric, EvalSuite, EvalCase, EvalSample, EvalResult, EvalReport,
+    Scorer, ExactMatchScorer, F1Scorer, ROUGELScorer, get_scorer,
+    SWEBenchLoader, GAIALoader,
+    EvalRunner, EvalRegistry, evaluate_quick,
+)
+
+# ── v1.10.0: Prompt Hub (versioned templates) ──
+from agentos.prompt.hub import (
+    PromptType, PromptTag, PromptVersion, PromptHub,
+    BUILTIN_PROMPTS, create_default_hub,
+)
 
 # Schema Enforcer (v1.3.9)
 from agentos.validation.schema_enforcer import (
