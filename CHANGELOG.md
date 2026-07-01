@@ -4,6 +4,20 @@ All notable changes to NexusAgentOS.
 
 ---
 
+## [1.8.2] — 2026-07-01
+
+### Added
+- **Skill Marketplace Platform** (`agentos/server/marketplace_platform.py`): Full production-ready skill marketplace backend. FastAPI + SQLite + JWT + bcrypt. Features: developer registration/login, skill zip upload with manifest validation, automatic security scanning (6 checks: dangerous imports, shell injection, obfuscation, hardcoded secrets, permission escalation, data exfiltration), admin review queue (approve/reject), public browse/search, download counts, developer profiles, API token management.
+- **Marketplace Web UI** (`agentos/server/static/platform.html`): Complete single-page web app. Developer signup/login, skill upload with drag-and-drop, browsing with search and category filter, skill detail pages, developer profile pages, admin review panel with security findings per skill.
+- **MCP Servers Expansion**: 3→8 built-in MCP servers, 16→34 tools. New: SearchServer (4 tools), GitServer (4 tools), ShellServer (3 tools), CodeServer (3 tools), TextServer (4 tools). All zero-dependency pure Python.
+- **Skill Fallback Expansion**: 14→64 built-in skills across 11 categories (Dev/Productivity/Communication/Data/Document/Media/System/Security/AI/Uncategorized).
+- **GitHub Open Source Launch**: Full source code published at https://github.com/wuyifeishu/nexus-agentos. MIT license. Comprehensive README with architecture diagram, API docs, and contributing guide.
+
+### Changed
+- MCP Server schemas renamed: `mcp__<server>__<tool>` format for OpenAI function schema compatibility.
+- PyPI package pushed: [nexus-agentos==1.8.2](https://pypi.org/project/nexus-agentos/1.8.2/).
+- TestPyPI pushed: [nexus-agentos==1.8.2](https://test.pypi.org/project/nexus-agentos/1.8.2/).
+
 ## [1.7.7] — 2026-07-01
 
 ### Added
