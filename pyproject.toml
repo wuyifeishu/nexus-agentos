@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "nexus-agentos"
-version = "1.14.4"
+version = "1.15.30"
 description = "AgentOS — Production-ready multi-agent framework with Tool-Using Agent, LLM abstraction, streaming/retry/checkpoint, swarm coordination, async parallel primitives, virtual memory pager, Docker/K8s deployment, multimodal, Prompt Hub, cost tracker, and enterprise features (RBAC, multi-tenancy, audit)."
 readme = "README.md"
 license = {text = "MIT"}
@@ -28,6 +28,7 @@ dependencies = [
     "fastapi>=0.100.0",
     "uvicorn>=0.30.0",
     "pydantic>=2.0",
+    "jsonschema>=4.20.0",
     "aiosqlite>=0.20.0",
     "pywebview>=5.0",
 ]
@@ -59,6 +60,19 @@ distributed = [
 hitl_ui = [
     "gradio>=4.0",
 ]
+api = [
+    "fastapi>=0.100.0",
+    "uvicorn>=0.30.0",
+    "websockets>=12.0",
+]
+cli = [
+    "click>=8.0",
+    "rich>=13.0",
+    "typer>=0.9",
+]
+docker = [
+    "docker>=7.0",
+]
 [project.urls]
 Homepage = "https://github.com/agentos/agentos"
 Documentation = "https://docs.agentos.dev"
@@ -66,6 +80,7 @@ Repository = "https://github.com/agentos/agentos.git"
 
 [project.scripts]
 agentos = "agentos.cli.main:main"
+agentos-daemon = "agentos.server.daemon:daemon_main"
 
 [tool.hatch.build.targets.wheel]
 packages = ["agentos", "examples"]

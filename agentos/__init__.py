@@ -41,7 +41,11 @@ v1.4.0: +End-to-end examples (multi_agent_research.py, file_ops_agent.py),
 +CLI demo upgraded with self-check mode, +Agent marketplace listing.
 """
 
-__version__ = "1.14.4"
+__version__ = "1.15.30"
+
+# v1.15.0: Tool Output Validation Layer (structured result validation + error classification + auto-repair suggestions).
+# v1.14.9: Memory Persistence Checkpoint Delivery - all 6 memory subsystems get_state()/restore_state() + ServerDaemon lifecycle integration + DaemonConfig + /api/daemon/memory endpoint.
+# v1.14.8: P0 regression fix (imports, version, dependencies).
 
 # Core - DI system
 from agentos.core.di import (
