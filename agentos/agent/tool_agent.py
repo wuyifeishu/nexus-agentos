@@ -4,6 +4,7 @@ Tool-Using Agent — 基于 LLM Function Calling 的自主 Agent 循环。
 核心模式:
     用户任务 → LLM 推理(tool_calls) → 工具执行 → 结果回传 → 循环直到完成
 
+v1.16.1: +CircuitBreaker +ToolOutputValidator +Metrics integrated into ToolExecutor/Agent.
 v1.3.38: +streaming, retry, checkpoint/resume, tool error handling, mock provider.
 """
 
@@ -13,7 +14,7 @@ import json
 import os
 import time
 from dataclasses import dataclass, field
-from typing import Any, Callable, Generator
+from typing import Any, Callable, Generator, Optional
 
 from agentos.llm.base import (
     LLMProvider,
@@ -25,6 +26,9 @@ from agentos.llm.base import (
     Tool,
     ToolCall,
 )
+from agentos.tools.circuit_breaker import CircuitBreaker, CircuitState
+from agentos.tools.validation import ToolOutputValidator, ToolResult, ValidationResult
+from agentos.tools.metrics import MetricsCollector, Counter, Timer
 
 __all__ = [
     "ToolAgent",
@@ -77,9 +81,23 @@ class AgentResult:
 # ── 工具执行器 ───────────────────────────────────────────────────
 
 class ToolExecutor:
-    def __init__(self):
+    """工具注册与执行器。
+
+    v1.16.1: 集成 CircuitBreaker（熔断保护）、ToolOutputValidator（输出校验）、
+    MetricsCollector（指标收集）。所有参数均为可选，不传则退化为原始行为。
+    """
+
+    def __init__(
+        self,
+        circuit_breaker: Optional[CircuitBreaker] = None,
+        validator: Optional[ToolOutputValidator] = None,
+        metrics: Optional[MetricsCollector] = None,
+    ):
         self._tools: dict[str, Callable[..., str]] = {}
         self._schemas: dict[str, Tool] = {}
+        self._cb = circuit_breaker
+        self._validator = validator
+        self._metrics = metrics
 
     def register(self, tool: Tool, handler: Callable[..., str]) -> None:
         self._tools[tool.function.name] = handler
@@ -89,12 +107,53 @@ class ToolExecutor:
         return list(self._schemas.values())
 
     def execute(self, tool_call: ToolCall) -> str:
+        """执行工具调用，经 CircuitBreaker → 执行 → Validator → Metrics 全链路。"""
         handler = self._tools.get(tool_call.name)
         if handler is None:
             return json.dumps({"error": f"Unknown tool: {tool_call.name}"})
+
+        # 1. 熔断器检查
+        if self._cb is not None:
+            if not self._cb.allow_request():
+                self._cb.record_failure()
+                return json.dumps({
+                    "error": f"Circuit breaker OPEN for '{self._cb.name}'",
+                    "circuit_state": self._cb.state.name,
+                })
+
+        t0 = time.monotonic()
         try:
-            return str(handler(**tool_call.parsed_arguments))
+            raw_output = str(handler(**tool_call.parsed_arguments))
+
+            # 2. 输出校验
+            validation_msg = ""
+            if self._validator is not None:
+                tr = ToolResult(output=raw_output, tool_name=tool_call.name)
+                val_result: ValidationResult = self._validator.validate(tr)
+                if not val_result.is_valid:
+                    issues = "; ".join(i.message for i in val_result.issues)
+                    validation_msg = f" [validation: {issues}]"
+
+            # 3. 熔断器记录成功
+            if self._cb is not None:
+                self._cb.record_success()
+
+            # 4. 指标记录
+            elapsed = (time.monotonic() - t0) * 1000
+            if self._metrics is not None:
+                self._metrics.get_counter("tool_calls_total").inc(tool_call.name)
+                self._metrics.get_counter("tool_calls_success").inc(tool_call.name)
+                self._metrics.get_timer("tool_latency_ms").record(elapsed)
+
+            return raw_output if not validation_msg else raw_output + validation_msg
+
         except Exception as e:
+            elapsed = (time.monotonic() - t0) * 1000
+            if self._cb is not None:
+                self._cb.record_failure()
+            if self._metrics is not None:
+                self._metrics.get_counter("tool_calls_total").inc(tool_call.name)
+                self._metrics.get_counter("tool_calls_errors").inc(tool_call.name)
             return json.dumps({"error": str(e)})
 
 
@@ -186,6 +245,7 @@ class ToolAgent:
         *,
         config: AgentConfig | None = None,
         system_prompt: str = "",
+        metrics: Optional[MetricsCollector] = None,
     ):
         self._provider = provider
         self._executor = tool_executor
@@ -195,6 +255,7 @@ class ToolAgent:
             "当你可以给出最终答案时，直接回答，不要再调用工具。"
             "用中文回答。"
         )
+        self._metrics = metrics
 
     # ── 同步 ──────────────────────────────────────────────────
 
@@ -355,6 +416,12 @@ class ToolAgent:
 
         if self._config.verbose:
             self._log_step(step)
+
+        # Metrics: track LLM calls and tokens
+        if self._metrics is not None:
+            self._metrics.get_counter("llm_calls_total").inc()
+            self._metrics.get_counter("llm_tokens_total").inc(result.usage.total_tokens)
+            self._metrics.get_counter("agent_steps_total").inc()
 
         # 无工具调用 → 终止，内容即为答案
         if not assistant_msg.tool_calls:

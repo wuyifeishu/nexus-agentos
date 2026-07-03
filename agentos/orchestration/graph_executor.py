@@ -3,6 +3,8 @@ Agent Graph — DAG-based multi-agent execution engine.
 
 Build complex agent pipelines as directed acyclic graphs where each node
 is an agent invocation and edges define data flow dependencies.
+
+v1.16.1: Integrated MetricsCollector for per-node execution tracking.
 """
 
 from __future__ import annotations
@@ -12,6 +14,8 @@ from collections import deque
 from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any, Callable, Optional
+
+from agentos.tools.metrics import MetricsCollector
 
 
 class GraphNodeState(Enum):
@@ -91,14 +95,16 @@ class AgentGraph:
         result = graph.execute("quantum computing advances")
     """
 
-    def __init__(self, executor: Optional[Callable[[str, str], Any]] = None):
+    def __init__(self, executor: Optional[Callable[[str, str], Any]] = None, metrics: Optional[MetricsCollector] = None):
         """
         Args:
             executor: Callable(agent_type, task) -> output. If not provided,
                       subclasses must override _execute_node.
+            metrics: Optional MetricsCollector for per-node execution tracking.
         """
         self._nodes: dict[str, GraphNode] = {}
         self._executor = executor
+        self._metrics = metrics
 
     def add_node(self, node: GraphNode) -> None:
         """Add a node to the graph. Raises ValueError on duplicate name."""
@@ -236,6 +242,14 @@ class AgentGraph:
                     abort = True
 
             node.latency_ms = (time.perf_counter() - node_t0) * 1000
+
+            # Metrics: track per-node execution
+            if self._metrics is not None:
+                self._metrics.get_counter("graph_nodes_total").inc(node.agent_type)
+                self._metrics.get_counter(
+                    f"graph_node_{node.state.value}"
+                ).inc(node.agent_type)
+                self._metrics.get_timer("graph_node_latency_ms").record(node.latency_ms)
 
         success = all(
             n.state in (GraphNodeState.COMPLETED, GraphNodeState.SKIPPED)

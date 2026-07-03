@@ -1,5 +1,9 @@
 """NexusAgent - Production-grade Agent Framework SDK
 
+__version__ = "1.16.1"
+
+v1.16.1: Core integration — CircuitBreaker, ToolOutputValidator, Metrics wired into ToolAgent + GraphExecutor.
+v1.16.0: 30 infrastructure tools (connection_pool, circuit_breaker, jwt, scheduler, etc.) consolidated release.
 v1.12.1: Async Parallel Primitives (fan-out/fan-in, parallel_gather, parallel_map, structured concurrency).
 v1.12.0: Letta-style Virtual Memory Pager (page-out/page-in + swap store + smart recall).
 v1.11.0: Background Task Manager + Agent Supervision Tree + Full Checkpoint Integration + Auto-Context Paging.
@@ -41,7 +45,7 @@ v1.4.0: +End-to-end examples (multi_agent_research.py, file_ops_agent.py),
 +CLI demo upgraded with self-check mode, +Agent marketplace listing.
 """
 
-__version__ = "1.15.30"
+__version__ = "1.16.0"
 
 # v1.15.0: Tool Output Validation Layer (structured result validation + error classification + auto-repair suggestions).
 # v1.14.9: Memory Persistence Checkpoint Delivery - all 6 memory subsystems get_state()/restore_state() + ServerDaemon lifecycle integration + DaemonConfig + /api/daemon/memory endpoint.
