@@ -1,0 +1,9 @@
+# ── Grafana Dashboard Provisioning ───────────────────────────────────────────
+apiVersion: 1
+
+providers:
+  - name: "AgentOS"
+    folder: "AgentOS"
+    type: file
+    options:
+      path: /etc/grafana/provisioning/dashboards

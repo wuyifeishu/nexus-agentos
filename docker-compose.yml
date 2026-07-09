@@ -1,0 +1,145 @@
+# ── AgentOS Docker Compose — Production Stack ─────────────────────────────────
+# Usage: docker compose up -d
+
+version: "3.9"
+
+services:
+  # ── AgentOS API Server ──────────────────────────────────────────────
+  agentos:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: agentos:latest
+    container_name: agentos-server
+    restart: unless-stopped
+    ports:
+      - "${AGENTOS_PORT:-8000}:8000"
+    environment:
+      - AGENTOS_ENV=production
+      - AGENTOS_LOG_LEVEL=${AGENTOS_LOG_LEVEL:-INFO}
+      - AGENTOS_MAX_WORKERS=${AGENTOS_MAX_WORKERS:-4}
+      - AGENTOS_TIMEOUT=${AGENTOS_TIMEOUT:-60}
+      - REDIS_URL=redis://redis:6379/0
+      - DB_URL=postgresql+asyncpg://agentos:${DB_PASSWORD:-agentos}@postgres:5432/agentos
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - DEEPSEEK_API_KEY=${DEEPSEEK_API_KEY}
+    volumes:
+      - agentos_data:/app/data
+      - agentos_logs:/app/logs
+      - ./config:/app/config:ro
+    depends_on:
+      redis:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:8000/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+    networks:
+      - agentos-net
+    deploy:
+      resources:
+        limits:
+          cpus: "2"
+          memory: 2G
+        reservations:
+          cpus: "0.5"
+          memory: 512M
+
+  # ── Redis (cache + session store) ───────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    container_name: agentos-redis
+    restart: unless-stopped
+    command: >
+      redis-server
+      --appendonly yes
+      --maxmemory 256mb
+      --maxmemory-policy allkeys-lru
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    networks:
+      - agentos-net
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+
+  # ── PostgreSQL (persistent state) ───────────────────────────────────
+  postgres:
+    image: postgres:16-alpine
+    container_name: agentos-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: agentos
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-agentos}
+      POSTGRES_DB: agentos
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+      - ./scripts/init-db.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U agentos -d agentos"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - agentos-net
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+
+  # ── Prometheus (metrics) ─────────────────────────────────────────────
+  prometheus:
+    image: prom/prometheus:v2.52.0
+    container_name: agentos-prometheus
+    restart: unless-stopped
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.path=/prometheus"
+      - "--storage.tsdb.retention.time=30d"
+      - "--web.console.libraries=/usr/share/prometheus/console_libraries"
+      - "--web.console.templates=/usr/share/prometheus/consoles"
+    ports:
+      - "${PROMETHEUS_PORT:-9090}:9090"
+    volumes:
+      - ./config/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    networks:
+      - agentos-net
+
+  # ── Grafana (dashboards) ────────────────────────────────────────────
+  grafana:
+    image: grafana/grafana:11.0.0
+    container_name: agentos-grafana
+    restart: unless-stopped
+    ports:
+      - "${GRAFANA_PORT:-3000}:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD:-admin}
+      - GF_AUTH_ANONYMOUS_ENABLED=false
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./config/grafana-dashboards:/etc/grafana/provisioning/dashboards:ro
+      - ./config/grafana-datasources:/etc/grafana/provisioning/datasources:ro
+    networks:
+      - agentos-net
+
+volumes:
+  agentos_data:
+  agentos_logs:
+  redis_data:
+  pg_data:
+  prometheus_data:
+  grafana_data:
+
+networks:
+  agentos-net:
+    driver: bridge

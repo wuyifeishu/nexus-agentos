@@ -1,0 +1,16 @@
+name: discord
+version: 0.1.0
+format: agentos
+description: Discord bot integration for servers and DMs
+author: NexusAgentOS Seed Team
+license: MIT
+homepage: https://github.com/openclaw/skills/tree/main/skills/discord
+category: communication
+tags:
+- communication
+- discord
+requirements: []
+entrypoint: discord.py
+agentos:
+  min_version: 1.16.0
+  type: tool

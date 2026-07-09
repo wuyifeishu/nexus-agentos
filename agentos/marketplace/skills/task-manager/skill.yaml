@@ -1,0 +1,16 @@
+name: task-manager
+version: 0.1.0
+format: agentos
+description: Task and to-do list management with priorities
+author: NexusAgentOS Seed Team
+license: MIT
+homepage: https://github.com/openclaw/skills/tree/main/skills/task-manager
+category: productivity
+tags:
+- productivity
+- tasks
+requirements: []
+entrypoint: task-manager.py
+agentos:
+  min_version: 1.16.0
+  type: tool

@@ -1,0 +1,16 @@
+name: theme-factory
+version: 0.1.0
+format: agentos
+description: 'Apply visual themes: color schemes, typography, spacing'
+author: NexusAgentOS Seed Team
+license: MIT
+homepage: https://github.com/openclaw/skills/tree/main/skills/theme-factory
+category: utility
+tags:
+- design
+- theme
+requirements: []
+entrypoint: theme-factory.py
+agentos:
+  min_version: 1.16.0
+  type: tool

@@ -1,0 +1,16 @@
+name: openai-whisper
+version: 0.1.0
+format: agentos
+description: OpenAI Whisper speech recognition integration
+author: NexusAgentOS Seed Team
+license: MIT
+homepage: https://github.com/openclaw/skills/tree/main/skills/openai-whisper
+category: media
+tags:
+- media
+- audio
+requirements: []
+entrypoint: openai-whisper.py
+agentos:
+  min_version: 1.16.0
+  type: tool

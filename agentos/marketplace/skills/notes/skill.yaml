@@ -1,0 +1,16 @@
+name: notes
+version: 0.1.0
+format: agentos
+description: Quick note-taking with search and organization
+author: NexusAgentOS Seed Team
+license: MIT
+homepage: https://github.com/openclaw/skills/tree/main/skills/notes
+category: productivity
+tags:
+- productivity
+- notes
+requirements: []
+entrypoint: notes.py
+agentos:
+  min_version: 1.16.0
+  type: tool

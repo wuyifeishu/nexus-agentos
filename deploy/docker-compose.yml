@@ -1,0 +1,80 @@
+# ── AgentOS Docker Compose ──
+version: "3.9"
+
+services:
+  agentos:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile
+    image: nexus-agentos:latest
+    container_name: agentos
+    restart: unless-stopped
+    ports:
+      - "${AGENTOS_PORT:-8080}:8080"
+    environment:
+      - AGENTOS_ENV=production
+      - AGENTOS_PORT=8080
+      - AGENTOS_LOG_LEVEL=${AGENTOS_LOG_LEVEL:-INFO}
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
+      - GOOGLE_API_KEY=${GOOGLE_API_KEY:-}
+      - DEEPSEEK_API_KEY=${DEEPSEEK_API_KEY:-}
+      - GROQ_API_KEY=${GROQ_API_KEY:-}
+    volumes:
+      - agentos_data:/home/agentos/data
+      - type: bind
+        source: ./config.yaml
+        target: /home/agentos/config.yaml
+        read_only: true
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+          cpus: "2"
+        reservations:
+          memory: 512M
+          cpus: "0.5"
+    logging:
+      driver: json-file
+      options:
+        max-size: "50m"
+        max-file: "3"
+
+  # Optional: Redis for caching & pub/sub
+  redis:
+    image: redis:7-alpine
+    container_name: agentos-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
+    profiles:
+      - full
+
+  # Optional: PostgreSQL for persistent storage
+  postgres:
+    image: postgres:16-alpine
+    container_name: agentos-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: agentos
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-agentos}
+      POSTGRES_DB: agentos
+    ports:
+      - "5432:5432"
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+    profiles:
+      - full
+
+volumes:
+  agentos_data:
+  redis_data:
+  pg_data:

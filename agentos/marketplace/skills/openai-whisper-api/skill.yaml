@@ -1,0 +1,16 @@
+name: openai-whisper-api
+version: 0.1.0
+format: agentos
+description: OpenAI Whisper API with batch processing
+author: NexusAgentOS Seed Team
+license: MIT
+homepage: https://github.com/openclaw/skills/tree/main/skills/openai-whisper-api
+category: media
+tags:
+- media
+- audio
+requirements: []
+entrypoint: openai-whisper-api.py
+agentos:
+  min_version: 1.16.0
+  type: tool

@@ -1,0 +1,16 @@
+name: audio-transcribe
+version: 0.1.0
+format: agentos
+description: Speech-to-text transcription with Whisper API
+author: NexusAgentOS Seed Team
+license: MIT
+homepage: https://github.com/openclaw/skills/tree/main/skills/audio-transcribe
+category: media
+tags:
+- media
+- audio
+requirements: []
+entrypoint: audio-transcribe.py
+agentos:
+  min_version: 1.16.0
+  type: tool

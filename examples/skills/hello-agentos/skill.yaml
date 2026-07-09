@@ -1,0 +1,25 @@
+name: "hello-agentos"
+version: "1.0.0"
+description: "A friendly greeting skill that can say hello in multiple languages."
+author: "AgentOS Team"
+license: MIT
+format: agentos
+entrypoint: "hello_skill:greet"
+tools:
+  - name: "hello"
+    description: "Say hello in a given language"
+    parameters:
+      language:
+        type: string
+        description: "Language to greet in (zh/en/ja/fr/es)"
+        default: "zh"
+      name:
+        type: string
+        description: "Name to greet"
+        default: "World"
+    returns: "string"
+dependencies: []
+tags:
+  - demo
+  - greeting
+min_agentos_version: "1.7.0"

@@ -1,0 +1,16 @@
+name: mcp-builder
+version: 0.1.0
+format: agentos
+description: Guide for creating MCP servers and tools
+author: NexusAgentOS Seed Team
+license: MIT
+homepage: https://github.com/openclaw/skills/tree/main/skills/mcp-builder
+category: utility
+tags:
+- mcp
+- infra
+requirements: []
+entrypoint: mcp-builder.py
+agentos:
+  min_version: 1.16.0
+  type: tool

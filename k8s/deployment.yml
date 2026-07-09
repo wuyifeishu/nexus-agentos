@@ -1,0 +1,171 @@
+# ── AgentOS Kubernetes Deployment ────────────────────────────────────────────
+# Usage: kubectl apply -f k8s/
+
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: agentos
+---
+# ── ConfigMap ────────────────────────────────────────────────────────────
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: agentos-config
+  namespace: agentos
+data:
+  AGENTOS_ENV: "production"
+  AGENTOS_LOG_LEVEL: "INFO"
+  AGENTOS_MAX_WORKERS: "4"
+  AGENTOS_TIMEOUT: "60"
+---
+# ── Secrets ──────────────────────────────────────────────────────────────
+apiVersion: v1
+kind: Secret
+metadata:
+  name: agentos-secrets
+  namespace: agentos
+type: Opaque
+stringData:
+  OPENAI_API_KEY: "sk-your-key-here"
+  AGENTOS_SECRET_KEY: "change-me"
+  DB_PASSWORD: "change-me"
+---
+# ── Deployment ───────────────────────────────────────────────────────────
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: agentos-server
+  namespace: agentos
+  labels:
+    app: agentos
+    component: server
+spec:
+  replicas: 3
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  selector:
+    matchLabels:
+      app: agentos
+      component: server
+  template:
+    metadata:
+      labels:
+        app: agentos
+        component: server
+    spec:
+      terminationGracePeriodSeconds: 30
+      containers:
+        - name: agentos
+          image: agentos:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8000
+              name: http
+          envFrom:
+            - configMapRef:
+                name: agentos-config
+          env:
+            - name: OPENAI_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: agentos-secrets
+                  key: OPENAI_API_KEY
+            - name: AGENTOS_SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: agentos-secrets
+                  key: AGENTOS_SECRET_KEY
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: agentos-secrets
+                  key: DB_PASSWORD
+          resources:
+            requests:
+              cpu: 500m
+              memory: 512Mi
+            limits:
+              cpu: 2
+              memory: 2Gi
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 10
+            periodSeconds: 15
+            timeoutSeconds: 5
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 5
+            periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 2
+          lifecycle:
+            preStop:
+              exec:
+                command: ["sleep", "5"]
+---
+# ── Service ──────────────────────────────────────────────────────────────
+apiVersion: v1
+kind: Service
+metadata:
+  name: agentos-server
+  namespace: agentos
+  labels:
+    app: agentos
+spec:
+  type: ClusterIP
+  selector:
+    app: agentos
+    component: server
+  ports:
+    - name: http
+      port: 8000
+      targetPort: 8000
+      protocol: TCP
+---
+# ── Horizontal Pod Autoscaler ────────────────────────────────────────────
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: agentos-hpa
+  namespace: agentos
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: agentos-server
+  minReplicas: 3
+  maxReplicas: 20
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageUtilization: 80
+---
+# ── Pod Disruption Budget ────────────────────────────────────────────────
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: agentos-pdb
+  namespace: agentos
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: agentos
+      component: server

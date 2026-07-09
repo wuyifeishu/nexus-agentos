@@ -1,0 +1,26 @@
+# ── Prometheus Configuration ─────────────────────────────────────────────────
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  scrape_timeout: 10s
+
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets: []
+
+rule_files: []
+
+scrape_configs:
+  - job_name: "agentos"
+    metrics_path: "/metrics"
+    static_configs:
+      - targets: ["agentos:8000"]
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: instance
+        replacement: "agentos-prod"
+
+  - job_name: "prometheus"
+    static_configs:
+      - targets: ["localhost:9090"]

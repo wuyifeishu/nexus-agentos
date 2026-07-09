@@ -1,0 +1,16 @@
+name: web-artifacts-builder
+version: 0.1.0
+format: agentos
+description: Build complex multi-file HTML artifacts with CSS/JS
+author: NexusAgentOS Seed Team
+license: MIT
+homepage: https://github.com/openclaw/skills/tree/main/skills/web-artifacts-builder
+category: web
+tags:
+- web
+- html
+requirements: []
+entrypoint: web-artifacts-builder.py
+agentos:
+  min_version: 1.16.0
+  type: tool

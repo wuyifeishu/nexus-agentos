@@ -1,0 +1,16 @@
+name: brand-guidelines
+version: 0.1.0
+format: agentos
+description: Applies brand colors and typography to any artifact
+author: NexusAgentOS Seed Team
+license: MIT
+homepage: https://github.com/openclaw/skills/tree/main/skills/brand-guidelines
+category: utility
+tags:
+- design
+- brand
+requirements: []
+entrypoint: brand-guidelines.py
+agentos:
+  min_version: 1.16.0
+  type: tool
