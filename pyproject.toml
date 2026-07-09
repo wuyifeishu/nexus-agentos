@@ -1,0 +1,116 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "nexus-agentos"
+version = "1.50.5"
+description = "AgentOS — Production-grade multi-agent framework: middleware pipeline, swarm coordination, structured logging, Prometheus metrics, graceful shutdown, Docker/K8s deploy, checkpoint/retry, multimodal, prompt hub, cost analytics, enterprise RBAC + multi-tenancy."
+readme = "README.md"
+license = {text = "MIT"}
+authors = [
+    {name = "AgentOS Team"},
+]
+keywords = [
+    "agent", "llm", "ai", "framework", "multi-agent", "function-calling",
+    "swarm", "rag", "middleware", "production",
+]
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Framework :: FastAPI",
+]
+requires-python = ">=3.11"
+dependencies = [
+    "openai>=1.0.0",
+    "httpx>=0.27.0",
+    "pyyaml>=6.0",
+    "fastapi>=0.100.0",
+    "uvicorn>=0.30.0",
+    "pydantic>=2.0",
+    "jsonschema>=4.20.0",
+    "aiosqlite>=0.20.0",
+]
+
+[project.optional-dependencies]
+server = [
+    "gunicorn>=22.0",
+    "uvicorn[standard]>=0.30.0",
+    "prometheus-client>=0.20.0",
+]
+dev = [
+    "pytest>=7.0",
+    "pytest-asyncio>=0.21",
+    "pytest-cov>=4.0",
+    "pytest-benchmark>=4.0",
+    "mypy>=1.0",
+    "ruff>=0.1",
+]
+evaluation = [
+    "rouge-score>=0.1.2",
+    "sentence-transformers>=2.0",
+]
+rag = [
+    "faiss-cpu>=1.7",
+    "chromadb>=0.4",
+    "tiktoken>=0.5",
+    "sentence-transformers>=2.0",
+    "pypdf>=4.0",
+    "python-docx>=1.0",
+]
+distributed = [
+    "ray>=2.9",
+]
+hitl_ui = [
+    "gradio>=4.0",
+]
+api = [
+    "fastapi>=0.100.0",
+    "uvicorn>=0.30.0",
+    "websockets>=12.0",
+]
+cli = [
+    "click>=8.0",
+    "rich>=13.0",
+    "typer>=0.9",
+]
+all = [
+    "nexus-agentos[server,rag,distributed,evaluation,hitl_ui,cli]",
+]
+
+[project.urls]
+Homepage = "https://github.com/agentos/agentos"
+Documentation = "https://docs.agentos.dev"
+Repository = "https://github.com/agentos/agentos.git"
+
+[project.scripts]
+agentos = "agentos.cli.main:main"
+agentos-daemon = "agentos.server.daemon:daemon_main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["agentos", "examples"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+addopts = "-v --tb=short"
+
+[tool.ruff]
+target-version = "py311"
+line-length = 120
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "N", "W", "UP"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["E702", "E501", "E402", "F841", "N806", "E731", "E741", "N818"]
+
+[tool.mypy]
+python_version = "3.11"
+ignore_missing_imports = true
+warn_return_any = true
+warn_unused_configs = true
