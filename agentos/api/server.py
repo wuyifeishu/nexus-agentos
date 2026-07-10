@@ -506,12 +506,16 @@ __all__ = ["app", "serve", "AgentManager", "AgentConfigRequest", "RunRequest", "
 
 
 # ── Auto-generated compat stubs ──
+# Only create stubs if the Pydantic models weren't already defined above
 
+try:
+    AgentAPI
+except NameError:
+    class AgentAPI:
+        pass
 
-# Auto-generated compat stubs
-class AgentAPI:
-    pass
-
-
-class RunResponse:
-    pass
+try:
+    RunResponse
+except NameError:
+    class RunResponse:
+        pass
