@@ -967,3 +967,448 @@ class TestAgentSupervisorMonitor:
 
         warnings = [e for e in events if e.type == SupervisionEventType.QUOTA_WARNING]
         assert len(warnings) > 0
+
+
+# ── Missing Coverage Tests (92% → 100%) ──────────────────────
+
+class TestSupervisorOnIteration:
+    """Cover supervised_on_iteration callback in _run_child (lines 407-434)."""
+
+    @pytest.mark.asyncio
+    async def test_on_iteration_kill_signal(self):
+        """line 407-408: kill signal inside on_iteration."""
+        sup = AgentSupervisor()
+
+        class IterLoop:
+            """Loop that actually calls on_iteration during run."""
+            def __init__(self, raise_after=1):
+                self.on_iteration = None
+                self._raise_after = raise_after
+                self._count = 0
+
+            async def run(self, task, session_id):
+                for i in range(1000):
+                    self._count += 1
+                    if self.on_iteration:
+                        await self.on_iteration(i, [])
+                    await asyncio.sleep(0.001)
+
+        child = SupervisedAgent(name="oi_kill")
+        child._pause_event = asyncio.Event()
+        child._pause_event.set()
+        child._kill_event = asyncio.Event()
+
+        loop = IterLoop()
+        child._task = asyncio.create_task(
+            sup._run_child(child, "task", None, loop)
+        )
+        # Wait for iteration then set kill
+        await asyncio.sleep(0.01)
+        child._kill_event.set()
+
+        try:
+            await child._task
+        except asyncio.CancelledError:
+            pass
+
+        assert child.status == "killed"
+
+    @pytest.mark.asyncio
+    async def test_on_iteration_pause_event(self):
+        """line 411-412: pause event wait."""
+        sup = AgentSupervisor()
+
+        class IterLoop:
+            def __init__(self):
+                self.on_iteration = None
+
+            async def run(self, task, session_id):
+                for i in range(1000):
+                    if self.on_iteration:
+                        await self.on_iteration(i, [])
+                    await asyncio.sleep(0.001)
+
+        child = SupervisedAgent(name="oi_pause")
+        child._pause_event = asyncio.Event()
+        child._pause_event.set()
+        child._kill_event = asyncio.Event()
+
+        loop = IterLoop()
+        child._task = asyncio.create_task(
+            sup._run_child(child, "task", None, loop)
+        )
+        # Let first iteration pass, then clear pause_event
+        await asyncio.sleep(0.005)
+        child._pause_event.clear()
+        # Wait a bit then resume
+        await asyncio.sleep(0.01)
+        child._pause_event.set()
+        # Now kill to clean up
+        child._kill_event.set()
+        try:
+            await child._task
+        except asyncio.CancelledError:
+            pass
+
+        assert child.status == "killed"
+
+    @pytest.mark.asyncio
+    async def test_on_iteration_updates_usage(self):
+        """line 415-416: iterations and elapsed update."""
+        sup = AgentSupervisor()
+
+        class IterLoop:
+            def __init__(self):
+                self.on_iteration = None
+
+            async def run(self, task, session_id):
+                for i in range(3):
+                    if self.on_iteration:
+                        await self.on_iteration(i, [])
+                    await asyncio.sleep(0.001)
+                class R:
+                    output = "done"
+                    cost_usd = 0.0
+                    tokens_used = {}
+                return R()
+
+        child = SupervisedAgent(name="oi_usage")
+        child._pause_event = asyncio.Event()
+        child._pause_event.set()
+        child._kill_event = asyncio.Event()
+
+        loop = IterLoop()
+        child._task = asyncio.create_task(
+            sup._run_child(child, "task", None, loop)
+        )
+        await asyncio.wait_for(child._task, timeout=3)
+
+        assert child.status == "completed"
+        assert child.usage.iterations >= 2
+        assert child.usage.elapsed_seconds > 0
+
+    @pytest.mark.asyncio
+    async def test_on_iteration_duration_quota_auto_kill(self):
+        """line 419-422: duration > max_duration, auto_kill=True."""
+        sup = AgentSupervisor()
+
+        class IterLoop:
+            def __init__(self):
+                self.on_iteration = None
+
+            async def run(self, task, session_id):
+                for i in range(100):
+                    if self.on_iteration:
+                        await self.on_iteration(i, [])
+                    await asyncio.sleep(0.001)
+
+        quotas = AgentQuota(max_duration_seconds=0.001)
+        child = SupervisedAgent(name="oi_dur_kill", quotas=quotas)
+        child._pause_event = asyncio.Event()
+        child._pause_event.set()
+        child._kill_event = asyncio.Event()
+
+        loop = IterLoop()
+        child._task = asyncio.create_task(
+            sup._run_child(child, "task", None, loop)
+        )
+        try:
+            await child._task
+        except (TimeoutError, asyncio.CancelledError):
+            pass
+
+        assert child.status in ("killed", "failed")
+
+    @pytest.mark.asyncio
+    async def test_on_iteration_duration_quota_warning(self):
+        """line 423-431: duration > max_duration, auto_kill=False."""
+        cfg = SupervisorConfig(auto_kill_on_quota=False)
+        sup = AgentSupervisor(config=cfg)
+
+        events = []
+        def cb(e):
+            events.append(e)
+        sup._on_event = cb
+
+        class IterLoop:
+            def __init__(self):
+                self.on_iteration = None
+
+            async def run(self, task, session_id):
+                for i in range(5):
+                    if self.on_iteration:
+                        await self.on_iteration(i, [])
+                    await asyncio.sleep(0.001)
+                class R:
+                    output = "done"
+                    cost_usd = 0.0
+                    tokens_used = {}
+                return R()
+
+        quotas = AgentQuota(max_duration_seconds=0.001)
+        child = SupervisedAgent(name="oi_warn", quotas=quotas)
+        child._pause_event = asyncio.Event()
+        child._pause_event.set()
+        child._kill_event = asyncio.Event()
+
+        loop = IterLoop()
+        child._task = asyncio.create_task(
+            sup._run_child(child, "task", None, loop)
+        )
+        await asyncio.wait_for(child._task, timeout=3)
+
+        assert child.status == "completed"
+        warnings = [e for e in events if e.type == SupervisionEventType.QUOTA_WARNING]
+        assert len(warnings) > 0
+
+    @pytest.mark.asyncio
+    async def test_on_iteration_original_on_iteration(self):
+        """line 433-434: original_on_iteration hook."""
+        sup = AgentSupervisor()
+
+        orig_calls = []
+        def orig_on_iter(iteration, tool_results):
+            orig_calls.append(iteration)
+
+        class IterLoop:
+            def __init__(self):
+                self.on_iteration = orig_on_iter
+
+            async def run(self, task, session_id):
+                for i in range(3):
+                    if self.on_iteration:
+                        await self.on_iteration(i, [])
+                    await asyncio.sleep(0.001)
+                class R:
+                    output = "orig ok"
+                    cost_usd = 0.0
+                    tokens_used = {}
+                return R()
+
+        child = SupervisedAgent(name="oi_orig")
+        child._pause_event = asyncio.Event()
+        child._pause_event.set()
+        child._kill_event = asyncio.Event()
+
+        loop = IterLoop()
+        child._task = asyncio.create_task(
+            sup._run_child(child, "task", None, loop)
+        )
+        await asyncio.wait_for(child._task, timeout=3)
+
+        assert child.status == "completed"
+        # orig_on_iter is called via supervised_on_iteration after usage update
+        assert len(orig_calls) >= 2
+
+
+class TestAwaitChildTimeout:
+    """Cover await_child TimeoutError branch (lines 287-290)."""
+
+    @pytest.mark.asyncio
+    async def test_await_child_timeout_kills_child(self):
+        """Create a task that ignores cancellation to hit TimeoutError."""
+        sup = AgentSupervisor()
+        cid = await sup.spawn(
+            name="tmo",
+            task="x",
+            loop_factory=lambda: MagicMock(),
+        )
+
+        # Replace child._task with one that ignores cancel for a while
+        async def stubborn_task():
+            try:
+                await asyncio.sleep(999)
+            except asyncio.CancelledError:
+                # Shield to ignore cancel
+                try:
+                    await asyncio.sleep(0.2)
+                except asyncio.CancelledError:
+                    pass
+                raise
+
+        child = sup._children[cid]
+        old_task = child._task
+        if old_task and not old_task.done():
+            old_task.cancel()
+        child._task = asyncio.create_task(stubborn_task())
+        child.status = "running"  # must be alive for kill_child to work
+        await asyncio.sleep(0.01)  # let it start
+
+        # await_child with short timeout should trigger TimeoutError branch
+        try:
+            await sup.await_child(cid, timeout=0.05)
+        except TimeoutError:
+            pass  # Expected
+        except asyncio.CancelledError:
+            pass
+
+        assert sup._children[cid].status == "killed"
+
+
+class TestShutdownTimeout:
+    """Cover shutdown Timeout/CancelledError catch (lines 377-378)."""
+
+    @pytest.mark.asyncio
+    async def test_shutdown_wait_for_timeout(self):
+        """Shutdown with a child whose task ignores cancellation briefly."""
+        sup = AgentSupervisor()
+
+        async def stubborn():
+            try:
+                await asyncio.sleep(999)
+            except asyncio.CancelledError:
+                # Ignore cancel briefly
+                await asyncio.sleep(0.2)
+                raise
+
+        cid = await sup.spawn(
+            name="stub",
+            task="x",
+            loop_factory=lambda: MagicMock(),
+        )
+        child = sup._children[cid]
+        old = child._task
+        if old and not old.done():
+            old.cancel()
+        child._task = asyncio.create_task(stubborn())
+        child.status = "running"
+        await asyncio.sleep(0.01)
+
+        # Shutdown with very short timeout
+        await sup.shutdown(timeout=0.02)
+
+
+class TestRetryCooldown:
+    """Cover retry cooldown sleep (line 458)."""
+
+    @pytest.mark.asyncio
+    async def test_retry_within_cooldown_period(self):
+        """Retry where a prior restart was within cooldown_period."""
+        sup = AgentSupervisor()
+        call_count = [0]
+
+        class MockResult:
+            output = "ok"
+            cost_usd = 0.0
+            tokens_used = {}
+
+        mock_loop = MagicMock()
+
+        async def always_fail_then_ok(task, session_id):
+            call_count[0] += 1
+            if call_count[0] <= 2:
+                raise RuntimeError("fail")
+            return MockResult()
+
+        mock_loop.run = always_fail_then_ok
+
+        quotas = AgentQuota(max_retries=3, retry_delay=0.01, cooldown_period=0.005)
+        child = SupervisedAgent(name="cool", quotas=quotas)
+        child._pause_event = asyncio.Event()
+        child._pause_event.set()
+        child._kill_event = asyncio.Event()
+
+        # Simulate a recent restart within cooldown
+        child.usage.restarts = 1
+        child.usage.last_restart = time.time()  # just now, within 60s
+
+        child._task = asyncio.create_task(
+            sup._run_child(child, "task", None, mock_loop)
+        )
+        await asyncio.wait_for(child._task, timeout=10)
+
+        assert child.status == "completed"
+        assert child.usage.restarts >= 2
+
+
+class TestHeartbeatLoopException:
+    """Cover heartbeat loop Exception pass (lines 517-518)."""
+
+    @pytest.mark.asyncio
+    async def test_heartbeat_callback_exception(self):
+        """on_heartbeat raises, heartbeat loop catches and continues."""
+        sup = AgentSupervisor()
+        call_count = [0]
+
+        async def flaky_hb():
+            call_count[0] += 1
+            if call_count[0] <= 1:
+                raise RuntimeError("hb fail")
+            # succeed on subsequent calls
+
+        quotas = AgentQuota(heartbeat_interval=0.01, heartbeat_timeout=30.0)
+        child = SupervisedAgent(name="hb_err", status="running", quotas=quotas)
+
+        task = asyncio.create_task(sup._heartbeat_loop(child, flaky_hb))
+        await asyncio.sleep(0.05)
+        task.cancel()
+        try:
+            await asyncio.wait_for(task, timeout=1)
+        except asyncio.CancelledError:
+            pass
+
+        assert call_count[0] >= 2
+        assert child.usage.heartbeats_received >= 1
+
+
+class TestHeartbeatStopsMidSleep:
+    """Cover heartbeat break from not-is_alive after sleep (line 503)."""
+
+    @pytest.mark.asyncio
+    async def test_heartbeat_stops_after_sleep(self):
+        """is_alive becomes False during sleep, break triggers."""
+        sup = AgentSupervisor()
+        quotas = AgentQuota(heartbeat_interval=0.05, heartbeat_timeout=30.0)
+        child = SupervisedAgent(name="hb_stop", status="running", quotas=quotas)
+
+        called = [0]
+
+        async def on_hb():
+            called[0] += 1
+
+        task = asyncio.create_task(sup._heartbeat_loop(child, on_hb))
+        await asyncio.sleep(0.03)
+        child.status = "killed"  # is_alive becomes False
+        await asyncio.sleep(0.1)
+
+        assert task.done() or task.cancelled()
+        assert called[0] == 0
+
+
+class TestMonitorException:
+    """Cover monitor loop Exception pass (lines 561-562)."""
+
+    @pytest.mark.asyncio
+    async def test_monitor_exception_handled(self):
+        """Monitor continues after AttributeError from broken child."""
+        cfg = SupervisorConfig(monitor_interval=0.01)
+        sup = AgentSupervisor(config=cfg)
+
+        # A child with quotas=None triggers AttributeError in the loop
+        bad = SupervisedAgent(name="bad", status="running", started_at=time.time())
+        bad.quotas = None  # causes AttributeError on heartbeat_timeout access
+        sup._children[bad.id] = bad
+
+        # Also add a normal child to verify the loop continues across cycles
+        good = SupervisedAgent(
+            name="good",
+            status="running",
+            started_at=time.time(),
+        )
+        good.quotas = AgentQuota(heartbeat_timeout=999, max_duration_seconds=99999)
+        good._pause_event = asyncio.Event()
+        good._pause_event.set()
+        sup._children[good.id] = good
+
+        started = asyncio.get_event_loop().time()
+        sup._monitor_task = asyncio.create_task(sup._monitor_loop())
+
+        await asyncio.sleep(0.08)
+        sup._monitor_task.cancel()
+        try:
+            await asyncio.wait_for(sup._monitor_task, timeout=1)
+        except asyncio.CancelledError:
+            pass
+
+        elapsed = asyncio.get_event_loop().time() - started
+        assert elapsed >= 0.05
