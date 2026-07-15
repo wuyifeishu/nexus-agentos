@@ -555,6 +555,6 @@ class ProductionAgent:
 
                 return wrapper
 
-            audited.register(schema, make_wrapper(original_name))
+            audited.register(schema.function, make_wrapper(original_name))
 
         return audited
